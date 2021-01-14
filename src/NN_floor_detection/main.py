@@ -18,11 +18,11 @@ from pathlib import Path
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
-def train(NUM_CLASSES, epochs=2):
+def train(NUM_CLASSES, EPOCHS=10):
     train_folder_path = Path("data/Dataset_try/")
     model_path = Path("data/model_save/")
-    # checkpoint_path = Path("results/training_checkpoints/weights")
-    checkpoint_path = '/results/weights'
+    # path for saving checkpoints
+    checkpoint_path = './results/training_checkpoints/weights.{epoch:02d}.ckpt'
 
     train_ds, val_ds = generate_dataset(train_folder_path)
 
@@ -30,27 +30,45 @@ def train(NUM_CLASSES, epochs=2):
 
     checkpoint_callbacks = keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_path,
+        save_weights_only=True,
         save_best_only=True,
         monitor='val_accuracy',
         mode='max',
-        save_weights_only=True,
         save_freq='epoch'
     )
 
     model.fit(
         train_ds,
-        epochs=epochs,
+        epochs=EPOCHS,
         validation_data=val_ds,
         callbacks=[checkpoint_callbacks]
     )
 
-    model.save_weights('/results/training_checkpoints/weights')
+
+def load(model, PATH_TO_WEIGHS):
+    # The model weights (that are considered the best)
+    # are loaded into the model.
+    latest = tf.train.latest_checkpoint(PATH_TO_WEIGHS)
+    model.load_weights(latest)
+
+    return model
+
+# TODO: create function for training with saved weights
 
 
 if __name__ == "__main__":
     NUM_CLASSES = 3
+    PATH_TO_WEIGHS = Path("results/training_checkpoints/")
+    # train = True --> train neural network
+    # train = False --> load save weights and eveluate network
+    TRAIN = True
 
-    train(NUM_CLASSES)
+    if TRAIN is True:
+        train(NUM_CLASSES)
+    else:
+        model_old = build_model(NUM_CLASSES)
+        model = load(model_old, PATH_TO_WEIGHS)
+        print(model)
 
     """
     img = keras.preprocessing.image.load_img("XXXX", target_size=image_size)

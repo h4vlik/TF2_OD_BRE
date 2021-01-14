@@ -1,3 +1,6 @@
+# My ignore files
+Dataset_try/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
