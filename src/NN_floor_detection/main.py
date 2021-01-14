@@ -30,6 +30,11 @@ model_path = ".data/model_save"
 im_size = (100, 100)
 # path for saving checkpoints
 checkpoint_path = './results/training_checkpoints/weights.{epoch:02d}.ckpt'
+# labels for clases - SVHN dataset
+CLASS_NAMES = [
+        'Num: 1', 'Num: 2', 'Num: 3',
+        'Num: 4', 'Num: 5', 'Num: 6',
+        'Num: 7', 'Num: 8', 'Num: 9', 'Num: 0']
 
 """
 functions
@@ -67,36 +72,30 @@ def load_w(model, PATH_TO_WEIGHS):
     return model
 
 
-def predict_image(model, PATH_TO_IMG):
+def predict_image(model, PATH_TO_IMG, image_size):
     img = keras.preprocessing.image.load_img(
         PATH_TO_IMG,
-        target_size=im_size,
-        color_mode="grayscale",
-        grayscale=True
+        target_size=image_size,
+        color_mode="rgb",
+        grayscale=False
     )
 
     img_array = keras.preprocessing.image.img_to_array(img)
-    img_array = tf.expand_dims(img_array, 0)  # Create batch axis
 
-    predictions = model.predict(img_array)
+    tf_img_array = tf.expand_dims(img_array, 0)  # Create batch axis
+
+    predictions = model.predict(tf_img_array)
+    result = CLASS_NAMES[predictions.argmax(axis=1)[0]]
+
     print(
         "Predictions: ", predictions
     )
 
-    score = predictions[0]
-    score0 = score[0]
-    score1 = score[1]
-    score2 = score[2]
+    plt.imshow(img_array/255.0)
+    plt.title(result)
+    plt.show()
 
-    print(
-        "This image is %.2f percent 0"
-        % (100 * score0), '\n'
-        "This image is %.2f percent 1"
-        % (100 * score1), '\n'
-        "This image is %.2f percent 2"
-        % (100 * score2)
-    )
-
+    print("Labels: ", result)
 
 # TODO: create function for training with saved weights
 
@@ -106,22 +105,26 @@ if __name__ == "__main__":
     variables
     """
     NUM_CLASSES = 3
+    IMG_SIZE = (32, 32)
+    PATH_TO_IMG = Path("data/test/img_test/6_frame_014762.jpeg")
     PATH_TO_WEIGHS = Path("results/training_checkpoints/")
-    PATH_TO_MODEL = "results/model_save"
+    PATH_TO_MODEL = "data/models/svhn_best_cnn.h5"
 
     # train = True --> train neural network
     # train = False --> load model or weights and eveluate network
-    TRAIN = True
+    TRAIN = False
 
     # LOAD_MODEL = True --> load model
     # LOAD_MODEL = False --> load weights
-    LOAD_MODEL = False
+    LOAD_MODEL = True
 
     if TRAIN is True:
         train(NUM_CLASSES)
     else:
         if LOAD_MODEL is True:
             model = keras.models.load_model(PATH_TO_MODEL)
+            print(model)
         else:
             model_old = build_model(NUM_CLASSES)
             model = load_w(model_old, PATH_TO_WEIGHS)
+        predict_image(model, PATH_TO_IMG, IMG_SIZE)
