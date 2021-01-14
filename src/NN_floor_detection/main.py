@@ -15,15 +15,28 @@ import os
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+
+"""
+variables
+"""
+# not changable variables
+# fix bug
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+# path to train folder
+train_folder_path = Path("data/Dataset_try/")
+# path for saving model
+model_path = ".data/model_save"
+# input image size
+im_size = (100, 100)
+# path for saving checkpoints
+checkpoint_path = './results/training_checkpoints/weights.{epoch:02d}.ckpt'
+
+"""
+functions
+"""
 
 
 def train(NUM_CLASSES, EPOCHS=10):
-    train_folder_path = Path("data/Dataset_try/")
-    model_path = Path("data/model_save/")
-    # path for saving checkpoints
-    checkpoint_path = './results/training_checkpoints/weights.{epoch:02d}.ckpt'
-
     train_ds, val_ds = generate_dataset(train_folder_path)
 
     model = build_model(NUM_CLASSES)
@@ -45,7 +58,7 @@ def train(NUM_CLASSES, EPOCHS=10):
     )
 
 
-def load(model, PATH_TO_WEIGHS):
+def load_w(model, PATH_TO_WEIGHS):
     # The model weights (that are considered the best)
     # are loaded into the model.
     latest = tf.train.latest_checkpoint(PATH_TO_WEIGHS)
@@ -53,33 +66,62 @@ def load(model, PATH_TO_WEIGHS):
 
     return model
 
-# TODO: create function for training with saved weights
 
+def predict_image(model, PATH_TO_IMG):
+    img = keras.preprocessing.image.load_img(
+        PATH_TO_IMG,
+        target_size=im_size,
+        color_mode="grayscale",
+        grayscale=True
+    )
 
-if __name__ == "__main__":
-    NUM_CLASSES = 3
-    PATH_TO_WEIGHS = Path("results/training_checkpoints/")
-    # train = True --> train neural network
-    # train = False --> load save weights and eveluate network
-    TRAIN = True
-
-    if TRAIN is True:
-        train(NUM_CLASSES)
-    else:
-        model_old = build_model(NUM_CLASSES)
-        model = load(model_old, PATH_TO_WEIGHS)
-        print(model)
-
-    """
-    img = keras.preprocessing.image.load_img("XXXX", target_size=image_size)
     img_array = keras.preprocessing.image.img_to_array(img)
     img_array = tf.expand_dims(img_array, 0)  # Create batch axis
 
     predictions = model.predict(img_array)
+    print(
+        "Predictions: ", predictions
+    )
+
     score = predictions[0]
+    score0 = score[0]
+    score1 = score[1]
+    score2 = score[2]
 
     print(
-        "This result for out image:"
-        % (100 * (1 - score), 100 * score)
+        "This image is %.2f percent 0"
+        % (100 * score0), '\n'
+        "This image is %.2f percent 1"
+        % (100 * score1), '\n'
+        "This image is %.2f percent 2"
+        % (100 * score2)
     )
+
+
+# TODO: create function for training with saved weights
+
+
+if __name__ == "__main__":
     """
+    variables
+    """
+    NUM_CLASSES = 3
+    PATH_TO_WEIGHS = Path("results/training_checkpoints/")
+    PATH_TO_MODEL = "results/model_save"
+
+    # train = True --> train neural network
+    # train = False --> load model or weights and eveluate network
+    TRAIN = True
+
+    # LOAD_MODEL = True --> load model
+    # LOAD_MODEL = False --> load weights
+    LOAD_MODEL = False
+
+    if TRAIN is True:
+        train(NUM_CLASSES)
+    else:
+        if LOAD_MODEL is True:
+            model = keras.models.load_model(PATH_TO_MODEL)
+        else:
+            model_old = build_model(NUM_CLASSES)
+            model = load_w(model_old, PATH_TO_WEIGHS)
