@@ -7,6 +7,16 @@ from pathlib import Path
 
 
 def build_model(NUM_CLASSES):
+    """
+    build_model
+    - build model from keras application --> efficientNetB0
+    - freeze all layers, replace Dense layer (output classification layer)
+    - compile
+
+    :param NUM_CLASSES: number of classes to be trained
+
+    :return model: model_new, keras model variable
+    """
     model = keras.applications.EfficientNetB0(
         include_top=False,
         weights="imagenet",
