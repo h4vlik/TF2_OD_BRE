@@ -33,7 +33,7 @@ im_size = (100, 100)
 # path for saving checkpoints
 checkpoint_path = './results/training_checkpoints/weights.{epoch:02d}.ckpt'
 # labels for clases - SVHN dataset
-CLASS_NAMES = [
+CLASS_NAMES_SVHN = [
         'Num: 1', 'Num: 2', 'Num: 3',
         'Num: 4', 'Num: 5', 'Num: 6',
         'Num: 7', 'Num: 8', 'Num: 9', 'Num: 0']
@@ -87,7 +87,7 @@ def predict_image(model, PATH_TO_IMG, image_size):
     tf_img_array = tf.expand_dims(img_array, 0)  # Create batch axis
 
     predictions = model.predict(tf_img_array)
-    result = CLASS_NAMES[predictions.argmax(axis=1)[0]]
+    result = CLASS_NAMES_SVHN[predictions.argmax(axis=1)[0]]
 
     print(
         "Predictions: ", predictions
@@ -121,7 +121,7 @@ def predict_img_loop(model, path_read, image_size=(32, 32)):
                 tf_img_array = tf.expand_dims(img_array, 0)  # Create batch axis
 
                 predictions = model.predict(tf_img_array)
-                result = CLASS_NAMES[predictions.argmax(axis=1)[0]]
+                result = CLASS_NAMES_SVHN[predictions.argmax(axis=1)[0]]
 
                 print(
                     "Predictions: ", predictions

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 
-def build_model(NUM_CLASSES):
+def build_model(num_classes):
     """
     build_model
     - build model from keras application --> efficientNetB0
@@ -29,7 +29,7 @@ def build_model(NUM_CLASSES):
     # custom modifications on top of pre-trained model and fit
     model_new = tf.keras.models.Sequential()
     model_new.add(model)
-    model_new.add(tf.keras.layers.Dense(NUM_CLASSES, activation='softmax'))
+    model_new.add(tf.keras.layers.Dense(num_classes, activation='softmax'))
 
     model_new.compile(
         optimizer='adam',
