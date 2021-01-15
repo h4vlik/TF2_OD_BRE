@@ -1,13 +1,17 @@
 # create dataset
+import os
 import tensorflow as tf
 from tensorflow import keras
-import os
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import matplotlib.pyplot as plt
 from pathlib import Path
 
 
 def generate_dataset(train_folder_path, image_size=(224, 224), batch_size=32):
-    data_gen = tf.keras.preprocessing.image.ImageDataGenerator(
+    """
+    generate dataset for training and also for validation
+    """
+    data_gen = ImageDataGenerator(
         shear_range=0.2,
         zoom_range=0.2,
         horizontal_flip=False,
@@ -35,7 +39,23 @@ def generate_dataset(train_folder_path, image_size=(224, 224), batch_size=32):
     return train_ds, val_ds
 
 
-def imageVisualization(train_ds, val_ds):
+def generate_test_dataset(dataset_folder_path, image_size=(32, 32), batch_size=32):
+    """
+    generate dataset for testing of model // not validation
+    """
+    test_datagen = ImageDataGenerator(rescale=1./255)
+
+    test_ds = test_datagen.flow_from_directory(
+        dataset_folder_path,
+        classes=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+        target_size=image_size,
+        batch_size=batch_size,
+        class_mode="categorical")
+
+    return test_ds
+
+
+def imageVisualization(train_ds):
     plt.figure(figsize=(2, 2))
     images, labels = train_ds.next()
     for i in range(2):
@@ -47,6 +67,6 @@ def imageVisualization(train_ds, val_ds):
 
 
 if __name__ == "__main__":
-    train_folder_path = Path("data/Dataset_try/")
-    train, val = generate_dataset(train_folder_path)
-    imageVisualization(train, val)
+    dataset_folder_path = Path("data/Dataset_ready/")
+    test_ds = generate_test_dataset(dataset_folder_path)
+    imageVisualization(test_ds)
