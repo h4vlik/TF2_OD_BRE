@@ -1,5 +1,6 @@
 # My ignore files
 Dataset_try/
+Dataset_ready/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
