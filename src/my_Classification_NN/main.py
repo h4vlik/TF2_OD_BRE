@@ -7,6 +7,7 @@ from core.create_dataset import generate_dataset, generate_test_dataset
 
 import matplotlib.pyplot as plt
 from PIL import ImageFile
+import datetime
 
 import tensorflow as tf
 from tensorflow import keras
@@ -30,7 +31,7 @@ weights_checkpoint_path = './results/training_checkpoints/weights.{epoch:02d}.ck
 CLASS_NAMES = ['0', '1', '2']
 
 
-def train(num_classes, image_shape, EPOCHS=50):
+def train(model, num_classes, image_shape, EPOCHS=50):
     """
     train
     - create dataset
@@ -47,9 +48,6 @@ def train(num_classes, image_shape, EPOCHS=50):
     # create datasets
     train_ds, val_ds = generate_dataset(train_folder_path, image_size=image_shape[:-1])
 
-    # create model
-    model = build_my_model(image_shape, num_classes)
-
     # define checkpoint - for saving best model
     checkpoint_callbacks = keras.callbacks.ModelCheckpoint(
         filepath=model_checkpoint_path,
@@ -57,6 +55,10 @@ def train(num_classes, image_shape, EPOCHS=50):
         monitor='val_accuracy',
         mode='max',
         save_weights_only=False)
+
+    # define tensorboard checkpoint
+    log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
     # define compiler
     model.compile(
@@ -69,7 +71,7 @@ def train(num_classes, image_shape, EPOCHS=50):
         train_ds,
         epochs=EPOCHS,
         validation_data=val_ds,
-        callbacks=[checkpoint_callbacks]
+        callbacks=[checkpoint_callbacks, tensorboard_callback]
     )
 
     return model
@@ -100,14 +102,21 @@ def transfer_train(num_classes, image_shape, path_to_model, path_to_save_model, 
 
     model_pre = keras.models.load_model(path_to_model)  # load pre-trained model
     model_pre.pop()  # remove last layer
+    model_pre.pop()  # remove last layer
+    model_pre.pop()  # remove last layer
 
     model_pre.trainable = False  # freeze model
 
     inputs = keras.Input(shape=image_shape)  # define input
     x = model_pre(inputs, training=False)  # pre-trained model
+    x = keras.layers.Dense(128, activation='relu')(x)  # new layer
+    x = keras.layers.Dropout(0.4)(x)  # new layer
     outputs = keras.layers.Dense(num_classes)(x)  # new output layer
     model = keras.Model(inputs, outputs)  # create new model
     model.summary()
+
+    # :TODO need probability output --> need sequential model - add sequential model obove
+    # dont know how, but its necessary
 
     # define checkpoint - for saving best model
     checkpoint_callbacks = keras.callbacks.ModelCheckpoint(
@@ -116,6 +125,10 @@ def transfer_train(num_classes, image_shape, path_to_model, path_to_save_model, 
         monitor='val_accuracy',
         mode='max',
         save_weights_only=False)
+
+    # define tensorboard checkpoint
+    log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
     # define compiler
     model.compile(
@@ -128,7 +141,7 @@ def transfer_train(num_classes, image_shape, path_to_model, path_to_save_model, 
         train_ds,
         epochs=EPOCHS,
         validation_data=val_ds,
-        callbacks=[checkpoint_callbacks]
+        callbacks=[checkpoint_callbacks, tensorboard_callback]
     )
 
     # SECOND STEP - FINE TUNING - optional
@@ -183,29 +196,31 @@ def predict_img_loop(model, path_read, image_size=(32, 32)):
 
 
 def predict_image(model, PATH_TO_IMG, image_size):
-    img = keras.preprocessing.image.load_img(
-        PATH_TO_IMG,
-        target_size=image_size,
-        color_mode="rgb",
-        grayscale=False
-    )
+    for fi_number, filename in enumerate(os.listdir(PATH_TO_IMG)):
+        img_path = PATH_TO_IMG+str(filename)
+        img = keras.preprocessing.image.load_img(
+            img_path,
+            target_size=image_size,
+            color_mode="rgb",
+            grayscale=False
+        )
 
-    img_array = keras.preprocessing.image.img_to_array(img)
+        img_array = keras.preprocessing.image.img_to_array(img)
 
-    tf_img_array = tf.expand_dims(img_array, 0)  # Create batch axis
+        tf_img_array = tf.expand_dims(img_array, 0)  # Create batch axis
 
-    predictions = model.predict(tf_img_array)
-    result = CLASS_NAMES[predictions.argmax(axis=1)[0]]
+        predictions = model.predict(tf_img_array)
+        result = CLASS_NAMES[predictions.argmax(axis=1)[0]]
 
-    print(
-        "Predictions: ", predictions
-    )
+        print(
+            "Predictions: ", predictions
+        )
 
-    plt.imshow(img_array/255.0)
-    plt.title(result)
-    plt.show()
+        plt.imshow(img_array/255.0)
+        plt.title(result)
+        plt.show()
 
-    print("Labels: ", result)
+        print("Labels: ", result)
 
 
 if __name__ == "__main__":
@@ -213,19 +228,20 @@ if __name__ == "__main__":
     variables
     """
     NUM_CLASSES = 3  # number of classes
-    EPOCHS = 30  # epochs count
+    EPOCHS = 150  # epochs count
     BATCH_SIZE = 10  # batch size
     image_shape = (32, 32, 3)  # input image shape
 
     path_to_model_tfl = 'data/models/svhn_best_cnn.h5'  # saved model path, for loading saved models
-    path_to_save_model_tfl = 'results/model_save/transfer/my_transfer_model.h5'
+    path_to_save_model_tfl = 'results/model_save/transfer/my_transfer_model_3.h5'
 
     path_to_trained_model = 'results/model_save/from_scratch/'  # saved model path, for loading saved models
 
-    path_to_dataset = 'data/Dataset_try/'  # main dataset path
-    path_to_img = Path("data/test/img_test/5_frame_011086.jpeg")
-    TRAIN = False  # = True --> train neural network, = False --> load model or weights and eveluate network
+    path_to_dataset = 'data/Dataset_ready/'  # main dataset path
+    path_to_img = 'data/test/img_test/'
+    TRAIN = True  # = True --> train neural network, = False --> load model or weights and eveluate network
     TRANSFER = True  # = True --> treansfer learning, use pre-trained model, = False --> train own model
+    SCRATCH = False  # = True --> learn from 0, = False --> continue with training of saved model
     LOAD_MODEL = True  # = True --> load model, = False --> load weights
 
     if TRAIN is True:
@@ -240,7 +256,14 @@ if __name__ == "__main__":
                 BATCH_SIZE=BATCH_SIZE
             )
         else:
-            train(NUM_CLASSES, image_shape, EPOCHS=EPOCHS)
+            if SCRATCH is True:
+                # train from scratch
+                model = build_my_model(image_shape, NUM_CLASSES)  # create model
+                train(model, NUM_CLASSES, image_shape, EPOCHS=EPOCHS)  # train model
+            else:
+                # continue with training
+                model = keras.models.load_model(path_to_save_model_tfl)
+                train(model, NUM_CLASSES, image_shape, EPOCHS=EPOCHS)  # train model
     else:
         if LOAD_MODEL is True:
             print("Load model and start predictions on images ...")
