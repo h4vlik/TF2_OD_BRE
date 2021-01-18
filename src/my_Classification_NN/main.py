@@ -248,7 +248,10 @@ if __name__ == "__main__":
         r'results\\model_save\\from_scratch\\',
         os.path.basename("my_cnn_model_class10_acc79.h5"))
 
-    path_to_trained_model = os.path.join(main_dir_path, r'results\\model_save\\from_scratch\\')  # saved model path, for loading saved models
+    # saved model path, for loading saved models
+    path_to_trained_model = os.path.join(
+        main_dir_path,
+        r'results\\model_save\\from_scratch\\')
 
     # main dataset path
     path_to_dataset = os.path.join(main_dir_path, r'data\\Dataset_ready\\')
