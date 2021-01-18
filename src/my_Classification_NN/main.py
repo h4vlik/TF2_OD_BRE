@@ -23,7 +23,7 @@ variables
 # fix bug
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 # path to train folder
-train_folder_path = Path("data/Dataset_try/")
+train_folder_path = Path("data/Dataset_ready/")
 # path for saving model checpoints
 model_checkpoint_path = './results/model_save/my_cnn_model.h5'
 # path for saving weights checkpoints
@@ -227,7 +227,7 @@ if __name__ == "__main__":
     """
     variables
     """
-    NUM_CLASSES = 3  # number of classes
+    NUM_CLASSES = 10  # number of classes
     EPOCHS = 150  # epochs count
     BATCH_SIZE = 10  # batch size
     image_shape = (32, 32, 3)  # input image shape
