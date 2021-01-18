@@ -158,30 +158,42 @@ def preprocess(image, image_size):
 if __name__ == "__main__":
 
     # set path
-    path_read = 'C:\\Users\\marti\\Disk Google\\DIPLOMKA\\KODING\\NN_display_digit_classification\\data\\Dataset_display\\'
-    path_write = ('data/Dataset_ready/')
+    path_read = r'C:\\Users\\marti\\Disk Google\\DIPLOMKA\\KODING\\NN_display_digit_classification\\data\\Dataset_display\\'
+    path_write = 'data/Dataset_ready/'
+    path_to_img = 'data/test/img_test/'
 
     # variable
     IMG_SIZE = 100
+    PROCESS_DATASET = False
 
-    # go trough all folders in the path
-    for fo_number, folder in enumerate(os.listdir(path_read)):
-        print("new folder:", folder)
+    if PROCESS_DATASET is True:
+        # go trough all folders in the path
+        for fo_number, folder in enumerate(os.listdir(path_read)):
+            print("new folder:", folder)
 
-        for fi_number, filename in enumerate(os.listdir(path_read+'\\'+folder)):
-            if fi_number > 1500:
-                break
-            else:
-                image = cv2.imread(path_read+str(folder)+'\\'+str(filename))
+            for fi_number, filename in enumerate(os.listdir(path_read+'\\'+folder)):
+                if fi_number > 1500:
+                    break
+                else:
+                    image = cv2.imread(path_read+str(folder)+'\\'+str(filename))
 
-                # preprocess the image file
-                new_image = preprocess(image, IMG_SIZE)
-                # write file
-                cv2.imwrite(
-                    path_write+str(folder)+'\\'
-                    + str(folder)+'_image_'
-                    + str(fi_number)+'.jpg',
-                    new_image,
-                    [int(cv2.IMWRITE_JPEG_QUALITY), 100])
+                    # preprocess the image file
+                    new_image = preprocess(image, IMG_SIZE)
+                    # write file
+                    cv2.imwrite(
+                        path_write+str(folder)+'\\'
+                        + str(folder)+'_image_'
+                        + str(fi_number)+'.jpg',
+                        new_image,
+                        [int(cv2.IMWRITE_JPEG_QUALITY), 100])
 
-                print("ulozeno: ", fi_number)
+                    print("ulozeno: ", fi_number)
+    else:
+        for fi_number, filename in enumerate(os.listdir(path_to_img)):
+            img_path = path_to_img+str(filename)
+            image = cv2.imread(img_path)
+
+            # preprocess the image file
+            new_image = preprocess(image, IMG_SIZE)
+            # write file
+            cv2.imwrite(path_to_img+'image_' + str(fi_number)+'.jpg', new_image, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
