@@ -2,7 +2,7 @@
 Main script, HAVELKA, 15/01/2021
 """
 
-from core.nn_my_model import build_my_model
+from core.nn_my_model import build_my_model, make_model
 from core.create_dataset import generate_dataset, generate_test_dataset
 
 import matplotlib.pyplot as plt
@@ -22,13 +22,23 @@ variables
 # not changable variables
 # fix bug
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+# main directory path
+main_dir_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # path to train folder
-train_folder_path = Path("data/Dataset_ready/")
+train_folder_path = os.path.join(main_dir_path, r"data\\Dataset_ready\\")
 # path for saving model checpoints
-model_checkpoint_path = './results/model_save/my_cnn_model.h5'
+model_checkpoint_path = os.path.join(
+    main_dir_path,
+    r'results\\model_save\\',
+    os.path.basename("my_cnn_model.h5"))
 # path for saving weights checkpoints
-weights_checkpoint_path = './results/training_checkpoints/weights.{epoch:02d}.ckpt'
-CLASS_NAMES = ['0', '1', '2']
+weights_checkpoint_path = os.path.join(
+    main_dir_path,
+    r'results\\training_checkpoints\\',
+    os.path.basename("weights.{epoch:02d}.ckpt"))
+
+CLASS_NAMES_3 = ['0', '1', '2']
+CLASS_NAMES_10 = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
 
 
 def train(model, num_classes, image_shape, EPOCHS=50):
@@ -100,19 +110,11 @@ def transfer_train(num_classes, image_shape, path_to_model, path_to_save_model, 
 
     train_ds, val_ds = generate_dataset(train_folder_path, image_size=image_shape[:-1], batch_size=BATCH_SIZE)
 
-    model_pre = keras.models.load_model(path_to_model)  # load pre-trained model
-    model_pre.pop()  # remove last layer
-    model_pre.pop()  # remove last layer
-    model_pre.pop()  # remove last layer
-
-    model_pre.trainable = False  # freeze model
-
-    inputs = keras.Input(shape=image_shape)  # define input
-    x = model_pre(inputs, training=False)  # pre-trained model
-    x = keras.layers.Dense(128, activation='relu')(x)  # new layer
-    x = keras.layers.Dropout(0.4)(x)  # new layer
-    outputs = keras.layers.Dense(num_classes)(x)  # new output layer
-    model = keras.Model(inputs, outputs)  # create new model
+    model = keras.models.load_model(path_to_model)  # load pre-trained model
+    for i in range(10):
+        model.layers[i].trainable = False  # freeze layers
+    model.pop()  # remove last layer
+    model.add(layers.Dense(num_classes))
     model.summary()
 
     # :TODO need probability output --> need sequential model - add sequential model obove
@@ -210,7 +212,7 @@ def predict_image(model, PATH_TO_IMG, image_size):
         tf_img_array = tf.expand_dims(img_array, 0)  # Create batch axis
 
         predictions = model.predict(tf_img_array)
-        result = CLASS_NAMES[predictions.argmax(axis=1)[0]]
+        result = CLASS_NAMES_10[predictions.argmax(axis=1)[0]]
 
         print(
             "Predictions: ", predictions
@@ -228,20 +230,32 @@ if __name__ == "__main__":
     variables
     """
     NUM_CLASSES = 10  # number of classes
-    EPOCHS = 150  # epochs count
-    BATCH_SIZE = 10  # batch size
+    EPOCHS = 100  # epochs count
+    BATCH_SIZE = 20  # batch size
     image_shape = (32, 32, 3)  # input image shape
 
-    path_to_model_tfl = 'data/models/svhn_best_cnn.h5'  # saved model path, for loading saved models
-    path_to_save_model_tfl = 'results/model_save/transfer/my_transfer_model_3.h5'
+    # saved model path, for loading saved models
+    path_to_model_tfl = os.path.join(
+        main_dir_path,
+        r'data\\models\\',
+        os.path.basename("svhn_best_cnn.h5"))
+    path_to_save_model_tfl = os.path.join(
+        main_dir_path,
+        r'results\\model_save\\transfer\\',
+        os.path.basename("my_transfer_model_new.h5"))
+    path_to_save_model_scratch = os.path.join(
+        main_dir_path,
+        r'results\\model_save\\from_scratch\\',
+        os.path.basename("my_cnn_model_class10_acc79.h5"))
 
-    path_to_trained_model = 'results/model_save/from_scratch/'  # saved model path, for loading saved models
+    path_to_trained_model = os.path.join(main_dir_path, r'results\\model_save\\from_scratch\\')  # saved model path, for loading saved models
 
-    path_to_dataset = 'data/Dataset_ready/'  # main dataset path
-    path_to_img = 'data/test/img_test/'
-    TRAIN = True  # = True --> train neural network, = False --> load model or weights and eveluate network
-    TRANSFER = True  # = True --> treansfer learning, use pre-trained model, = False --> train own model
-    SCRATCH = False  # = True --> learn from 0, = False --> continue with training of saved model
+    # main dataset path
+    path_to_dataset = os.path.join(main_dir_path, r'data\\Dataset_ready\\')
+    path_to_img = os.path.join(main_dir_path, r'data\\test\\img_test\\')
+    TRAIN = False  # = True --> train neural network, = False --> load model or weights and eveluate network
+    TRANSFER = False  # = True --> treansfer learning, use pre-trained model, = False --> train own model
+    SCRATCH = True  # = True --> learn from 0, = False --> continue with training of saved model
     LOAD_MODEL = True  # = True --> load model, = False --> load weights
 
     if TRAIN is True:
@@ -258,7 +272,8 @@ if __name__ == "__main__":
         else:
             if SCRATCH is True:
                 # train from scratch
-                model = build_my_model(image_shape, NUM_CLASSES)  # create model
+                # model = build_my_model(image_shape, NUM_CLASSES)  # create model
+                model = make_model(image_shape, NUM_CLASSES=NUM_CLASSES)
                 train(model, NUM_CLASSES, image_shape, EPOCHS=EPOCHS)  # train model
             else:
                 # continue with training
@@ -267,7 +282,7 @@ if __name__ == "__main__":
     else:
         if LOAD_MODEL is True:
             print("Load model and start predictions on images ...")
-            model = keras.models.load_model(path_to_save_model_tfl)
+            model = keras.models.load_model(path_to_save_model_scratch)
             predict_image(model, path_to_img, image_shape[:-1])
             print("Prediction is done.")
         else:
