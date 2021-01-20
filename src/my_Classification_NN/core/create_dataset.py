@@ -58,8 +58,8 @@ def generate_test_dataset(dataset_folder_path, image_size=(100, 100), batch_size
 def imageVisualization(train_ds):
     plt.figure(figsize=(2, 2))
     images, labels = train_ds.next()
-    for i in range(2):
-        ax = plt.subplot(2, 1, i + 1)
+    for i in range(10):
+        ax = plt.subplot(5, 2, i + 1)
         plt.imshow(images[i])
         plt.title(str(labels[i]))
         plt.axis("off")

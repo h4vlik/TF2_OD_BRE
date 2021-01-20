@@ -29,6 +29,10 @@ def build_model(num_classes):
     # custom modifications on top of pre-trained model and fit
     model_new = tf.keras.models.Sequential()
     model_new.add(model)
+    model_new.add(tf.keras.layers.Flatten())
+    model_new.add(tf.keras.layers.Dense(512, activation='relu'))
+    model_new.add(tf.keras.layers.Dense(256, activation='relu'))
+    model_new.add(tf.keras.layers.Dense(128, activation='relu'))
     model_new.add(tf.keras.layers.Dense(num_classes, activation='softmax'))
 
     model_new.compile(

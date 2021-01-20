@@ -23,14 +23,15 @@ variables
 # fix bug
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 # main directory path
+# main_dir_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 main_dir_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # path to train folder
 train_folder_path = os.path.join(main_dir_path, r"data\\Dataset_ready\\")
 # path for saving model checpoints
 model_checkpoint_path = os.path.join(
     main_dir_path,
-    r'results\\model_save\\',
-    os.path.basename("my_cnn_model.h5"))
+    r'results\\model_save\\from_scratch\\',
+    os.path.basename("my_cnn_model_10class_100x100_new{}.h5".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))))
 # path for saving weights checkpoints
 weights_checkpoint_path = os.path.join(
     main_dir_path,
@@ -40,8 +41,11 @@ weights_checkpoint_path = os.path.join(
 CLASS_NAMES_3 = ['0', '1', '2']
 CLASS_NAMES_10 = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
 
+tb_cnn_name = "my_cnn_model_10class_100x100_{}".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+tb_cnn_name_tf = "my_transfer_model_10class_32x32_{}".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
-def train(model, num_classes, image_shape, EPOCHS=50):
+
+def train(model, num_classes, image_shape, EPOCHS=50, BATCH_SIZE=32):
     """
     train
     - create dataset
@@ -56,7 +60,7 @@ def train(model, num_classes, image_shape, EPOCHS=50):
     :return trained_model: keras model variable
     """
     # create datasets
-    train_ds, val_ds = generate_dataset(train_folder_path, image_size=image_shape[:-1])
+    train_ds, val_ds = generate_dataset(train_folder_path, image_size=image_shape[:-1], batch_size=BATCH_SIZE)
 
     # define checkpoint - for saving best model
     checkpoint_callbacks = keras.callbacks.ModelCheckpoint(
@@ -67,8 +71,8 @@ def train(model, num_classes, image_shape, EPOCHS=50):
         save_weights_only=False)
 
     # define tensorboard checkpoint
-    log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+    log_dir = "logs/{}".format(tb_cnn_name)
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
 
     # define compiler
     model.compile(
@@ -110,11 +114,23 @@ def transfer_train(num_classes, image_shape, path_to_model, path_to_save_model, 
 
     train_ds, val_ds = generate_dataset(train_folder_path, image_size=image_shape[:-1], batch_size=BATCH_SIZE)
 
+    """
     model = keras.models.load_model(path_to_model)  # load pre-trained model
     for i in range(10):
         model.layers[i].trainable = False  # freeze layers
     model.pop()  # remove last layer
     model.add(layers.Dense(num_classes))
+    model.summary()
+    """
+    model_pre = keras.models.load_model(path_to_model)  # load pre-trained model
+    model_pre.pop()  # remove last layer
+
+    model_pre.trainable = False  # freeze model
+
+    inputs = keras.Input(shape=image_shape)  # define input
+    x = model_pre(inputs, training=False)  # pre-trained model
+    outputs = keras.layers.Dense(num_classes)(x)  # new output layer
+    model = keras.Model(inputs, outputs)  # create new model
     model.summary()
 
     # :TODO need probability output --> need sequential model - add sequential model obove
@@ -129,8 +145,8 @@ def transfer_train(num_classes, image_shape, path_to_model, path_to_save_model, 
         save_weights_only=False)
 
     # define tensorboard checkpoint
-    log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+    log_dir = "logs/{}".format(tb_cnn_name_tf)
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir)
 
     # define compiler
     model.compile(
@@ -231,8 +247,8 @@ if __name__ == "__main__":
     """
     NUM_CLASSES = 10  # number of classes
     EPOCHS = 100  # epochs count
-    BATCH_SIZE = 20  # batch size
-    image_shape = (32, 32, 3)  # input image shape
+    BATCH_SIZE = 15  # batch size
+    image_shape = (100, 100, 3)  # input image shape
 
     # saved model path, for loading saved models
     path_to_model_tfl = os.path.join(
@@ -246,7 +262,7 @@ if __name__ == "__main__":
     path_to_save_model_scratch = os.path.join(
         main_dir_path,
         r'results\\model_save\\from_scratch\\',
-        os.path.basename("my_cnn_model_class10_acc79.h5"))
+        os.path.basename("my_cnn_model_20_1_10class_100x100.h5"))
 
     # saved model path, for loading saved models
     path_to_trained_model = os.path.join(
@@ -256,10 +272,11 @@ if __name__ == "__main__":
     # main dataset path
     path_to_dataset = os.path.join(main_dir_path, r'data\\Dataset_ready\\')
     path_to_img = os.path.join(main_dir_path, r'data\\test\\img_test\\')
+
     TRAIN = False  # = True --> train neural network, = False --> load model or weights and eveluate network
     TRANSFER = False  # = True --> treansfer learning, use pre-trained model, = False --> train own model
     SCRATCH = True  # = True --> learn from 0, = False --> continue with training of saved model
-    LOAD_MODEL = True  # = True --> load model, = False --> load weights
+    LOAD_MODEL_SCRATCH = True  # = True --> load scratch model, = False --> load transfer model
 
     if TRAIN is True:
         print("Training is starting ...")
@@ -275,19 +292,25 @@ if __name__ == "__main__":
         else:
             if SCRATCH is True:
                 # train from scratch
-                # model = build_my_model(image_shape, NUM_CLASSES)  # create model
-                model = make_model(image_shape, NUM_CLASSES=NUM_CLASSES)
-                train(model, NUM_CLASSES, image_shape, EPOCHS=EPOCHS)  # train model
+                print("========= build my model ==========")
+                model = build_my_model(image_shape, NUM_CLASSES)  # create model
+                # model = make_model(image_shape, NUM_CLASSES=NUM_CLASSES)
+                print("========= Start training model from scratch ==========")
+                train(model, NUM_CLASSES, image_shape, EPOCHS=EPOCHS, BATCH_SIZE=BATCH_SIZE)  # train model
+                print("========= Training succesfull =========")
             else:
                 # continue with training
+
                 model = keras.models.load_model(path_to_save_model_tfl)
-                train(model, NUM_CLASSES, image_shape, EPOCHS=EPOCHS)  # train model
+                train(model, NUM_CLASSES, image_shape, EPOCHS=EPOCHS, BATCH_SIZE=BATCH_SIZE)  # train model
     else:
-        if LOAD_MODEL is True:
+        if LOAD_MODEL_SCRATCH is True:
             print("Load model and start predictions on images ...")
             model = keras.models.load_model(path_to_save_model_scratch)
             predict_image(model, path_to_img, image_shape[:-1])
             print("Prediction is done.")
         else:
-            model_old = build_my_model(image_shape, NUM_CLASSES)
-            # TODO: use function for loading weights to model
+            print("Load model and start predictions on images ...")
+            model = keras.models.load_model(path_to_save_model_tfl)
+            predict_image(model, path_to_img, image_shape[:-1])
+            print("Prediction is done.")
