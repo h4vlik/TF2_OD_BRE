@@ -35,7 +35,7 @@ im_size = (224, 224)
 weights_checkpoint_path = os.path.join(
     main_dir_path,
     r'results\\training_checkpoints\\',
-    os.path.basename("weights.{epoch:02d}-{val_accuracy:.2f}-{}.ckpt"))
+    os.path.basename("weights_new.{epoch:02d}"+str(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))+".ckpt"))
 # labels for clases - dataset
 CLASS_NAMES = [
         'Num: 0', 'Num: 1', 'Num: 2', 'Num: 3',
@@ -49,7 +49,7 @@ functions
 """
 
 
-def train(model, NUM_CLASSES, EPOCHS=30):
+def train(model, NUM_CLASSES, EPOCHS=50):
     train_ds, val_ds = generate_dataset(train_folder_path)
 
     # define tensorboard checkpoint
@@ -73,6 +73,20 @@ def train(model, NUM_CLASSES, EPOCHS=30):
     )
 
     return model
+
+
+def unfreeze_model(model):
+    # We unfreeze the top 10 layers while leaving BatchNorm layers frozen
+    for layer in model.layers[-5:]:
+        if not isinstance(layer, layers.BatchNormalization):
+            layer.trainable = True
+
+    optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
+    model.compile(
+        optimizer=optimizer,
+        loss=keras.losses.SparseCategoricalCrossentropy(),
+        metrics=["accuracy"]
+    )
 
 
 def load_w(model, PATH_TO_WEIGHS):
@@ -192,7 +206,7 @@ if __name__ == "__main__":
 
     # train = True --> train neural network
     # train = False --> load model or weights and eveluate network
-    TRAIN = True
+    TRAIN = False
     CONTINUE = True
 
     # LOAD_MODEL = True --> load model
@@ -203,6 +217,7 @@ if __name__ == "__main__":
         if CONTINUE is True:
             model_old = build_model(NUM_CLASSES)
             model = load_w(model_old, PATH_TO_WEIGHS)
+            unfreeze_model(model)
             model = train(model, NUM_CLASSES)
         else:
             model = build_model(NUM_CLASSES)
