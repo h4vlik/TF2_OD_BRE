@@ -39,7 +39,7 @@ weights_checkpoint_path = os.path.join(
     os.path.basename("weights.{epoch:02d}.ckpt"))
 
 CLASS_NAMES_3 = ['0', '1', '2']
-CLASS_NAMES_10 = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+CLASS_NAMES_10 = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
 tb_cnn_name = "my_cnn_model_10class_100x100_{}".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 tb_cnn_name_tf = "my_transfer_model_10class_32x32_{}".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
@@ -246,9 +246,9 @@ if __name__ == "__main__":
     variables
     """
     NUM_CLASSES = 10  # number of classes
-    EPOCHS = 100  # epochs count
-    BATCH_SIZE = 15  # batch size
-    image_shape = (100, 100, 3)  # input image shape
+    EPOCHS = 7  # epochs count
+    BATCH_SIZE = 25  # batch size
+    image_shape = (150, 150, 3)  # input image shape
 
     # saved model path, for loading saved models
     path_to_model_tfl = os.path.join(
@@ -262,7 +262,7 @@ if __name__ == "__main__":
     path_to_save_model_scratch = os.path.join(
         main_dir_path,
         r'results\\model_save\\from_scratch\\',
-        os.path.basename("my_cnn_model_20_1_10class_100x100.h5"))
+        os.path.basename("my_cnn_model_10class_150x150_new20210121-092251.h5"))
 
     # saved model path, for loading saved models
     path_to_trained_model = os.path.join(
@@ -273,7 +273,7 @@ if __name__ == "__main__":
     path_to_dataset = os.path.join(main_dir_path, r'data\\Dataset_ready\\')
     path_to_img = os.path.join(main_dir_path, r'data\\test\\img_test\\')
 
-    TRAIN = False  # = True --> train neural network, = False --> load model or weights and eveluate network
+    TRAIN = True  # = True --> train neural network, = False --> load model or weights and eveluate network
     TRANSFER = False  # = True --> treansfer learning, use pre-trained model, = False --> train own model
     SCRATCH = True  # = True --> learn from 0, = False --> continue with training of saved model
     LOAD_MODEL_SCRATCH = True  # = True --> load scratch model, = False --> load transfer model
@@ -293,8 +293,8 @@ if __name__ == "__main__":
             if SCRATCH is True:
                 # train from scratch
                 print("========= build my model ==========")
-                model = build_my_model(image_shape, NUM_CLASSES)  # create model
-                # model = make_model(image_shape, NUM_CLASSES=NUM_CLASSES)
+                # model = build_my_model(image_shape, NUM_CLASSES)  # create model
+                model = make_model(image_shape, NUM_CLASSES=NUM_CLASSES)
                 print("========= Start training model from scratch ==========")
                 train(model, NUM_CLASSES, image_shape, EPOCHS=EPOCHS, BATCH_SIZE=BATCH_SIZE)  # train model
                 print("========= Training succesfull =========")
