@@ -30,7 +30,7 @@ weights_checkpoint_path = os.path.join(
 CLASS_NAMES_10 = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
 
-def camera_prediction():
+def camera_save_img():
     # define a video capture object
     cam = cv2.VideoCapture(0)
 
@@ -62,5 +62,23 @@ def camera_prediction():
     cv2.destroyAllWindows()
 
 
+def camera_prediction(model):
+
+    # define a video capture object
+    cam = cv2.VideoCapture(0)
+
+    # name of the window
+    cv2.namedWindow("Display classification")
+
+    while True:
+        ret, frame = cam.read()
+        if not ret:
+            print("ERROR - fail to grab the frame")
+            break
+
+        # show the image
+        cv2.imshow("Display classification", frame)
+
+
 if __name__ == "__main__":
-    camera_prediction()
+    camera_save_img()
