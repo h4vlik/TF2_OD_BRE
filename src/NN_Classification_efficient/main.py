@@ -6,7 +6,7 @@ from core.nn_model import build_model
 from core.dataset import generate_dataset, generate_test_dataset
 
 import matplotlib.pyplot as plt
-from PIL import ImageFile
+from PIL import ImageFile, Image
 import os
 
 import tensorflow as tf
@@ -129,8 +129,55 @@ def predict_img_folder(model, PATH_TO_IMG, image_size):
 
 
 def camera_prediction(model, image_size):
-    # TODO: prediction on image from camera
-    pass
+    # define a video capture object
+    cam = cv2.VideoCapture(0)
+
+    # name of the window
+    cv2.namedWindow("Display classification")
+
+    while True:
+        start_time = time.time()  # define start time
+
+        ret, frame = cam.read()
+
+        # test image captured
+        if not ret:
+            print("ERROR - fail to grab the frame")
+            break
+
+        # if ESC pressed - exit
+        k = cv2.waitKey(1)
+        if k % 256 == 27:
+            # ESC pressed
+            print("Escape hit, closing...")
+            break
+
+        # show the image
+        cv2.imshow("Display classification", frame)
+
+        # convert cv2 image to PIL image
+        # the color is converted from BGR to RGB
+        color_coverted = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # convert to PIL
+        pil_frame = Image.fromarray(color_coverted)
+        # convert to array
+        frame_array = keras.preprocessing.image.img_to_array(pil_frame)
+
+        frame_resized = keras.preprocessing.image.smart_resize(frame_array, (image_size))
+        tf_img_array = tf.expand_dims(frame_resized, 0)  # Create batch axis
+
+        # PREDICTION
+        predictions = model.predict(tf_img_array)
+        rounded_pred = np.around(predictions*100)
+        result = CLASS_NAMES[predictions.argmax(axis=1)[0]]
+
+        print(
+            "Predictions: ", rounded_pred
+        )
+        print("\n Labels: ", result)
+
+        end_time = time.time()  # end time
+        print("execution time is: ", (end_time - start_time))
 
 
 if __name__ == "__main__":
@@ -150,4 +197,5 @@ if __name__ == "__main__":
     """
     model_old = build_model(NUM_CLASSES)
     model = load_w(model_old, PATH_TO_WEIGHS)
-    predict_img_folder(model, PATH_TO_IMG, image_size=IMG_SIZE)
+    camera_prediction(model, IMG_SIZE)
+    # predict_img_folder(model, PATH_TO_IMG, image_size=IMG_SIZE)
