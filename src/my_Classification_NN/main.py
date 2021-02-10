@@ -1,5 +1,7 @@
 """
 Main script, HAVELKA, 15/01/2021
+
+train, load, transfer train various NN models
 """
 
 from core.nn_my_model import build_my_model, make_model
