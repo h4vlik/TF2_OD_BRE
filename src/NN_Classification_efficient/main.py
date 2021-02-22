@@ -8,6 +8,7 @@ from core.dataset import generate_dataset, generate_test_dataset
 import matplotlib.pyplot as plt
 from PIL import ImageFile, Image
 import os
+import pylab
 
 import tensorflow as tf
 from tensorflow import keras
@@ -180,6 +181,38 @@ def camera_prediction(model, image_size):
         print("execution time is: ", (end_time - start_time))
 
 
+def eval_dataset(model, IMG_SIZE, test_folder_path):
+    """
+    evaluate dataset and compute confusion matrix
+    """
+
+    y_pred = []
+    test_ds = generate_test_dataset(test_folder_path, image_size=IMG_SIZE)
+    y_true = test_ds.classes  # numpy array of all labels
+    print(y_true)
+
+    # go trough all folders in the path
+    for fo_number, folder in enumerate(sorted(os.listdir(test_folder_path))):
+        print("new folder:", folder)
+        for fi_number, filename in enumerate(os.listdir(test_folder_path+'/'+folder)):
+            img_path = test_folder_path+str(folder)+'/'+str(filename)
+            img = keras.preprocessing.image.load_img(
+                img_path,
+                target_size=IMG_SIZE,
+                color_mode="rgb",
+                grayscale=False
+            )
+
+            img_array = keras.preprocessing.image.img_to_array(img)
+            tf_img_array = tf.expand_dims(img_array, 0)  # Create batch axis
+
+            predictions = model.predict(tf_img_array)
+            Y_pred = np.around(predictions)  # round prediction
+            Y_pred = Y_pred.argmax(axis=1)[0]
+            y_pred.append(Y_pred)
+        print(y_pred)
+
+
 if __name__ == "__main__":
     """
     variables
@@ -192,10 +225,15 @@ if __name__ == "__main__":
     PATH_TO_DATASET = os.path.join(main_dir_path, r'data\\Dataset_ready\\')
     PATH_TO_IMG = os.path.join(main_dir_path, r'data\\test\\camera\\')
 
+    PATH_TO_FUSION_DATASET = os.path.join(
+        os.path.dirname(main_dir_path),
+        r'breach_elevator\Accelero_processing\Data_for_fusion\MERENI_18_2_2021_display_photo')
+
     """
     MAIN CODE
     """
     model_old = build_model(NUM_CLASSES)
     model = load_w(model_old, PATH_TO_WEIGHS)
-    camera_prediction(model, IMG_SIZE)
+    # camera_prediction(model, IMG_SIZE)
     # predict_img_folder(model, PATH_TO_IMG, image_size=IMG_SIZE)
+    eval_dataset(model, IMG_SIZE, PATH_TO_FUSION_DATASET)

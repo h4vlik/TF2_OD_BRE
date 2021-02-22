@@ -39,7 +39,7 @@ def generate_dataset(train_folder_path, image_size=(224, 224), batch_size=32):
     return train_ds, val_ds
 
 
-def generate_test_dataset(dataset_folder_path, image_size=(32, 32), batch_size=32):
+def generate_test_dataset(dataset_folder_path, image_size=(224, 224), batch_size=32):
     """
     generate dataset for testing of model // not validation
     """
@@ -47,10 +47,10 @@ def generate_test_dataset(dataset_folder_path, image_size=(32, 32), batch_size=3
 
     test_ds = test_datagen.flow_from_directory(
         dataset_folder_path,
-        classes=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+        color_mode="rgb",
         target_size=image_size,
         batch_size=batch_size,
-        class_mode="categorical")
+        class_mode="sparse")
 
     return test_ds
 

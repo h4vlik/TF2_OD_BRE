@@ -3,5 +3,8 @@
     "python.linting.pylintEnabled": false,
     "python.linting.pycodestyleEnabled": true,
     "python.linting.enabled": true,
-    "python.linting.pycodestyleArgs": ["--max-line-length=120" ]
+    "python.linting.pycodestyleArgs": [
+        "--max-line-length=120"
+    ],
+    "jupyter.jupyterServerType": "local"
 }
