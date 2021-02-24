@@ -1,3 +1,8 @@
+"""
+scripts with detectFloorAcc class, that provides all functions connected with floor detection via accelerometer
+"""
+from input_feed import InputFeed
+
 import time
 import datetime
 import numpy as np
@@ -10,12 +15,10 @@ import json
 
 
 # script for offline floor detection based on real-time-floor detection
-class Detect_floor(object):
-    def __init__(self, csv_file_path, calibration_csv_file_path, real_floor_vector):
-        # path definition
-        self.csv_file_path = csv_file_path
-        self.calibration_csv_file_path = calibration_csv_file_path
-        self.main_dir_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+class detectFloorAcc(object):
+    def __init__(self):
+        self.input = InputFeed.InputFeed()
+        self.end_count = self.input.end_count
 
         # Initialization of communication
         self.sample_freq = 100  # frequency of input data
@@ -23,41 +26,26 @@ class Detect_floor(object):
 
         # Parameters - constants during running the program
         self.deltaVelMax = 0.01  # this is number after ride one floor - calibration - NEED TO BE DONE
-        self.cal_loop_count = 200
+        self.cal_loop_count = self.sample_freq*13  # 10 seconds to ride one floor up or down, for elevator calibration
         self.deltaVelMaxMultiplier_low = 0.01
         self.halfMaxVel = 0.2
         self.deltaVelMaxMultiplier_positive = 0.3
         self.deltaVelMaxMultiplier_negative = 0.2
         self.length_floor = 2.35  # floor lenght in meters
+        self.acc_low_treshold = 0.1
 
         # Inicialization
         self.integrate = False  # boolean
         self.calibration_not_completed = True  # boolean
-        self.state = "estimate floor"  # variable for state machine
+        self.state = "ride calibration"  # variable for state machine
 
         # buffer inicialization
         self.buffer_length = 50  # sample count for filtration buffer
         self.filt_buffer = []  # buffer for filtration
         self.ACC_ARRAY_FILT = []  # array to save all data during code run
 
-        # filter inicialization
-        # Bandpass filter
-        highpass_cutoff = 0.01  # filter DC parts of signal
-        lowpass_cutoff = 10  # filter noise
-        self.bandpass = signal.butter(
-            2,
-            [2*highpass_cutoff/self.sample_freq, 2*lowpass_cutoff/self.sample_freq],
-            'bandpass',
-            analog=False,
-            output='ba'
-            )
-        # Lowpass filter for noise elimination, 10 Hz cutoff
-        self.DLPF = signal.butter(
-            1,
-            2*lowpass_cutoff/self.sample_freq,
-            'lowpass',
-            analog=False,
-            output='ba')
+        # init filters
+        self.__init_filters()
 
         # array for plot inicialization
         self.acc_array = []
@@ -67,7 +55,6 @@ class Detect_floor(object):
         self.time_array = []
         self.floor_array = []
         self.floor_vector = []
-        self.real_floor_vector = real_floor_vector
 
         # other inicializations
         self.main_loop_iterator = 0  # variable for counting iterations in the main loop
@@ -92,172 +79,44 @@ class Detect_floor(object):
         # starting position
         self.starting_floor = 0
 
-    def loadCalibrationCSV(self):
+        # elevator stop, True = elevators ride is over, False = elevator rides
+        self.elevators_ride_stop = False
+
+    def __init_filters(self):
         """
-        load calibration data from .csv file in array
+        create filters
         """
+        # filter inicialization
+        # Bandpass filter
+        highpass_cutoff = 0.01  # filter DC parts of signal
+        lowpass_cutoff = 10  # filter noise
+        self.bandpass = signal.butter(
+            2,
+            [2*highpass_cutoff/self.sample_freq, 2*lowpass_cutoff/self.sample_freq],
+            'bandpass',
+            analog=False,
+            output='ba'
+            )
+        # Lowpass filter for noise elimination, 10 Hz cutoff
+        self.DLPF = signal.butter(
+            1,
+            2*lowpass_cutoff/self.sample_freq,
+            'lowpass',
+            analog=False,
+            output='ba')
 
-        my_calibration_data = np.genfromtxt(
-            self.calibration_csv_file_path,
-            delimiter='\t')
-
-        # data z akcelerometru
-        self.load_time_array = my_calibration_data[1:, 0]
-        self.load_acc_array = my_calibration_data[1:, 1]
-
-        # get length of input data
-        self.end_count = self.load_time_array.shape[0]
-        print("delka vstupnich dat: ", self.end_count)
-
-    def loadCSV(self):
-        """
-        load data from .csv file in array
-        """
-
-        my_data = np.genfromtxt(
-            self.csv_file_path,
-            delimiter='\t')
-
-        # data z akcelerometru
-        self.load_time_array = my_data[1:, 0]
-        self.load_acc_array = my_data[1:, 1]
-
-        # get length of input data
-        self.end_count = self.load_time_array.shape[0]
-        print("delka vstupnich dat: ", self.end_count)
-
-    def getAcc(self):
-        """
-        load data from .csv file like from sensor
-        """
-        self.acc = self.load_acc_array[self.main_loop_iterator]
-
-    def getTime(self):
-        self.time = self.load_time_array[self.main_loop_iterator]
-
-    def calibrateSensor(self):
-        """
-        function for calibration of sensor
-        --> measure for X seconds acceleration, count offset and subtract it from acc
-        """
-
-        if self.loop_iterator == 0:
-            # append acc to array
-            self.acc_array = np.append(self.acc_array, self.acc)
-            print("Calibration of sensor is running ...")
-
-            # update iteration
-            self.loop_iterator += 1
-
-        elif self.loop_iterator == self.cal_loop_count:
-
-            self.offset = np.mean(self.acc_array)  # count offset
-
-            # self.state = "ride up calibration" # switch to next state
-            self.state = "estimate floor"  # switch to next state
-
-            self.loop_iterator = 0  # set iteration count to 0 for next usage
-            self.acc_array = []  # clear acc_array
-            self.time_array = []  # clear time array
-            self.time = 0
-            self.time_prev = 0
-
-            print(" Calibration is done!")
-            print("\n offset is: ", self.offset)
-            print("\n Next state >>> ", self.state)
-
-        else:
-            # append acc to array
-            self.acc_array = np.append(self.acc_array, self.acc)
-            # actualize loop count
-            self.loop_iterator += 1
-
-        # each iteration =>> pos = 0
-        self.pos = 0
-
-    def calibrateRideUp(self):
+    def calibrateRide(self):
         """
         calibrate tresholds for floor estimation part when elevator rides up
+        input: self.button_pressed --> information if button is pressed (True, False)
+        input: self.acc --> acceleration
+        input: self.display_digit --> what is in the display ??
 
         output: self.deltaVelMaxUp
         output: self.halfMaxVel
-        output: self.length_floor
+        output:
         """
 
-        if self.main_loop_iterator == 0:
-            print("Move elevator up. Calibration is running ... ")
-            self.time_array = np.append(self.time_array, self.time)
-            self.acc_array = np.append(self.acc_array, self.acc)
-
-        elif self.main_loop_iterator == self.end_count-1:
-            # filter
-            self.acc_array = signal.filtfilt(self.bandpass[0], self.bandpass[1], self.acc_array)
-            # subtract offset
-            self.acc_array = self.acc_array - np.mean(self.acc_array)
-            # integrate to velocity
-            self.velocity_array = self.delta_time * integrate.cumtrapz(self.acc_array, initial=0)
-            # integrate to position
-            self.position_array = self.delta_time * integrate.cumtrapz(self.velocity_array, initial=0)
-            # count delta vel - difference
-            self.delta_vel_array = np.diff(self.velocity_array, prepend=[0])
-
-            # count tresholds
-            self.halfMaxVel = 0.5*np.amax(self.velocity_array)
-            print("half of max velocity: ", self.halfMaxVel)
-            self.deltaVelMax = np.amax(np.absolute(self.delta_vel_array))
-            print("velocity difference - max value: ", self.deltaVelMax)
-            self.length_floor = np.amax(self.position_array)
-            print("delka jednoho patra: ", self.length_floor)
-
-            """
-            f, axs = plt.subplots(4, 1, sharey=True)
-
-            axs[0].plot(self.time_array, self.acc_array)
-            axs[0].set_ylabel('acc [m/ss]')
-
-            axs[1].plot(self.time_array, self.velocity_array)
-            axs[1].set_ylabel('vel [m/s]')
-
-            axs[2].plot(self.time_array, self.position_array)
-            axs[2].set_ylabel('position ride Up [m]')
-
-            axs[3].plot(self.time_array, self.delta_vel_array)
-            axs[3].set_ylabel('delta vel [m]')
-            plt.show()
-            """
-
-            # clear all data
-            self.time_array = []
-            self.velocity_array = []
-            self.delta_vel_array = []
-            self.acc_array = []
-            self.position_array = []
-            self.loop_iterator = 0
-            self.acc = 0
-            self.acc_prev = 0
-            self.vel = 0
-            self.vel_prev = 0
-            self.delta_vel = 0
-            self.pos = 0
-            self.pos_prev = 0
-            self.floor_number = 0
-            self.time = 0
-            self.time_prev = 0
-
-            self.state = "estimate floor"  # switch to next state
-            print(" <<<<<< Kalibrace pro jizdu nahoru hotova >>>>>> \n")
-            print("----- FLOOR ESTIMATION RUNNING ------\n")
-
-        else:
-            self.time_array = np.append(self.time_array, self.time)
-            self.acc_array = np.append(self.acc_array, self.acc)
-
-    def calibrateRideDown(self):
-        """
-        calibrate tresholds for floor estimation part when elevator rides down
-
-        output: self.deltaVelMaxDown
-        """
         i = 0
 
         if self.main_loop_iterator == 0:
@@ -265,13 +124,13 @@ class Detect_floor(object):
             self.time_array = np.append(self.time_array, self.time)
             self.acc_array = np.append(self.acc_array, self.acc)
 
-        elif self.main_loop_iterator == self.end_count-1:
+        elif self.main_loop_iterator > self.cal_loop_count and abs(self.acc) < self.acc_low_treshold:
             # filter
             self.acc_array = signal.filtfilt(self.DLPF[0], self.DLPF[1], self.acc_array)
             # integrate to velocity
             self.velocity_array = self.delta_time * integrate.cumtrapz(self.acc_array, initial=0)
             # count max vel
-            self.halfMaxVel = 0.5*np.amax(self.velocity_array)
+            self.halfMaxVel = 0.5*np.amax(np.absolute(self.velocity_array))
             # count delta vel - difference
             self.delta_vel_array = np.diff(self.velocity_array, prepend=[0])
             self.deltaVelMax = np.amax(np.absolute(self.delta_vel_array))
@@ -295,15 +154,18 @@ class Detect_floor(object):
                             self.vel = 0
                             self.vel_prev = 0
                             self.integrate = False
+                            self.elevators_ride_stop = True
                 else:
                     # pro kladnou deltu
                     if self.delta_vel >= (self.deltaVelMax*self.deltaVelMaxMultiplier_positive):
                         # zacni integrovat
                         self.integrate = True
+                        self.elevators_ride_stop = False
 
                     # pro zapornou deltu
-                    elif abs(self.delta_vel) >= (self.deltaVelMax*self.deltaVelMaxMultiplier_negative) and self.delta_vehl < 0:
+                    elif abs(self.delta_vel) >= (self.deltaVelMax*self.deltaVelMaxMultiplier_negative) and self.delta_vel < 0:
                         self.integrate = True
+                        self.elevators_ride_stop = False
 
                     else:
                         # neintegruju, zachovam predeslou hodnotu
@@ -317,7 +179,7 @@ class Detect_floor(object):
             # count tresholds
             print("half of max velocity: ", self.halfMaxVel)
             print("velocity difference - max value: ", self.deltaVelMax)
-            self.length_floor = np.amax(self.position_array)
+            self.length_floor = np.amax(np.absolute(self.position_array))
             print("delka jednoho patra: ", self.length_floor)
 
             f, axs = plt.subplots(4, 1, sharey=True)
@@ -482,112 +344,78 @@ class Detect_floor(object):
         self.floor_array = np.append(self.floor_array, self.floor_number)
 
     def plotData(self):
-        _, axs1 = plt.subplots(nrows=5, ncols=1, figsize=(10, 6))
-        rows = ['{}'.format(row) for row in ['raw acceleration \n[m/ss]', 'filt_acceleration \n[m/ss]', 'velocity \n[m/s]', 'position \n[m]', 'floor \n[-]']]
+        _, axs1 = plt.subplots(nrows=4, ncols=1, figsize=(10, 6))
+        rows = ['{}'.format(row) for row in ['filt_acceleration \n[m/ss]', 'velocity \n[m/s]', 'position \n[m]', 'floor \n[-]']]
 
         for ax, row in zip(axs1, rows):
             ax.set_ylabel(row)
             ax.grid()
 
-        axs1[0].plot(self.load_time_array, self.load_acc_array)
-        axs1[1].plot(self.time_array, self.acc_array)
-        axs1[2].plot(self.time_array, self.velocity_array)
-        axs1[3].plot(self.time_array, self.position_array)
-        axs1[4].plot(self.time_array, self.floor_array)
-        axs1[4].set_xlabel("time [s]")
+        axs1[0].plot(self.time_array, self.acc_array)
+        axs1[1].plot(self.time_array, self.velocity_array)
+        axs1[2].plot(self.time_array, self.position_array)
+        axs1[3].plot(self.time_array, self.floor_array)
+        axs1[3].set_xlabel("time [s]")
 
     def spin(self):
-        # calibration loop
-        self.loadCalibrationCSV()
-
-        while self.main_loop_iterator < self.end_count:
-            self.getAcc()
-            self.getTime()
-
-            # self.calibrateRideUp()
-            self.calibrateRideDown()
-
-            self.main_loop_iterator += 1
-
-        # clear all data
-        self.main_loop_iterator = 0
-        self.load_time_array = []
-        self.load_acc_array = []
-
         # MAIN LOOP
-        try:
-            self.loadCSV()  # load data to load array
+        acc_data = self.input.get_acc_data(self.main_loop_iterator)
+        self.acc = acc_data[1]
+        self.time = acc_data[0]
 
-            # starting position
-            self.pos_prev = self.length_floor * self.starting_floor
+        # filtration part
+        self.loadDataToBuffer()
+        if self.main_loop_iterator > (self.buffer_length-1):
+            index = self.main_loop_iterator - self.buffer_length
+            self.acc = self.ACC_ARRAY_FILT[index]
+        else:
+            # first X values (according to buffer length) is 0
+            self.acc = 0
 
-            while self.main_loop_iterator < self.end_count:
-                self.getAcc()
-                self.getTime()
+        # calibrate elevator
+        if self.state == "ride calibration":
+            self.calibrateRide()
 
-                # filtration part
-                self.loadDataToBuffer()
-                if self.main_loop_iterator > (self.buffer_length-1):
-                    index = self.main_loop_iterator - self.buffer_length
-                    self.acc = self.ACC_ARRAY_FILT[index]
-                else:
-                    # first X values (according to buffer length) is 0
-                    self.acc = 0
+        # calibration is completed --> start estimate the floor number
+        elif self.state == "estimate floor":
 
-                # colect 250 samples, count offset - 5s, robot doesnt move - NOT NEEDED
-                if self.state == "sensor calibration":
-                    # sensor calibration - count offset
-                    self.calibrateSensor()
+            # count delta_vel
+            self.getVelocity()
 
-                elif self.state == "ride up calibration":
-                    self.calibrateRideUp()
-
-                elif self.state == "ride down calibration":
-                    self.calibrateRideDown()
-
-                # calibration is completed --> start estimate the floor number
-                elif self.state == "estimate floor":
-
-                    # count delta_vel
-                    self.getVelocity()
-
-                    if self.integrate:
-                        if abs(self.delta_vel) < (self.deltaVelMax*self.deltaVelMaxMultiplier_low):
-                            if abs(self.vel) > self.halfMaxVel:
-                                self.vel = self.vel_prev
-                                self.integrate = False
-                            else:
-                                self.vel = 0
-                                self.vel_prev = 0
-                                self.acc = 0
-                                self.integrate = False
-                                self.floor_number_eval = np.copy(self.floor_number)
+            if self.integrate:
+                if abs(self.delta_vel) < (self.deltaVelMax*self.deltaVelMaxMultiplier_low):
+                    if abs(self.vel) > self.halfMaxVel:
+                        self.vel = self.vel_prev
+                        self.integrate = False
                     else:
-                        # pro kladnou deltu
-                        if self.delta_vel >= (self.deltaVelMax*self.deltaVelMaxMultiplier_positive):
-                            # zacni integrovat
-                            self.integrate = True
+                        # part where integration stops --> SAVE FLOOR NUMBER AND LOAD IMAGE TO CLASSIFY IT
+                        self.vel = 0
+                        self.vel_prev = 0
+                        self.acc = 0
+                        self.integrate = False
+                        self.floor_number_eval = np.copy(self.floor_number)
+            else:
+                # pro kladnou deltu
+                if self.delta_vel >= (self.deltaVelMax*self.deltaVelMaxMultiplier_positive):
+                    # zacni integrovat
+                    self.integrate = True
 
-                        # pro zapornou deltu
-                        elif abs(self.delta_vel) >= (self.deltaVelMax*self.deltaVelMaxMultiplier_negative) and self.delta_vel < 0:
-                            self.integrate = True
+                # pro zapornou deltu
+                elif abs(self.delta_vel) >= (self.deltaVelMax*self.deltaVelMaxMultiplier_negative) and self.delta_vel < 0:
+                    self.integrate = True
 
-                        else:
-                            # neintegruju, zachovam predeslou hodnotu
-                            self.vel = self.vel_prev
+                else:
+                    # neintegruju, zachovam predeslou hodnotu
+                    self.vel = self.vel_prev
 
-                    self.getPosition()
-                    self.saveData()
+            self.getPosition()
+            self.saveData()
 
-                # aktualizuji data
-                self.vel_prev = np.copy(self.vel)
-                self.acc_prev = np.copy(self.acc)
-                self.time_prev = np.copy(self.time)
-                self.main_loop_iterator += 1  # iterate main loop iterator
-
-        except KeyboardInterrupt:
-            print("Program will be stopped ...")
-            pass
+        # aktualizuji data
+        self.vel_prev = np.copy(self.vel)
+        self.acc_prev = np.copy(self.acc)
+        self.time_prev = np.copy(self.time)
+        self.main_loop_iterator += 1  # iterate main loop iterator
 
 
 def createResultsFile(main_dir_path):
@@ -661,7 +489,7 @@ def main():
             real_floor_vector = load_real_data(folder, filename, real_floor_data)
 
             # main part of code
-            detect_floor = Detect_floor(path_to_csv_file, path_to_calibration_csv_file, real_floor_vector)
+            detect_floor = detectFloorAcc(path_to_csv_file, path_to_calibration_csv_file, real_floor_vector)
             detect_floor.spin()
             detect_floor.evaluateDetection()
             detect_floor.plotData()

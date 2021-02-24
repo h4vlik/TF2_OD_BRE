@@ -26,42 +26,34 @@ flags.DEFINE_string(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))),
     'PATH to main folder path (TF_OD_BRE folder)')
 
-#####
-# CAMERA FLAGS START
+# ===== ACC FEED FLAGS ====== #
+flags.DEFINE_string('csv_input_file_path',
+                    os.path.join(r'data\\Acc_input_data\\A3_01', os.path.basename("A3_01.csv")),
+                    'PATH to a csv input file, where meassurement data are stored.')
+
+flags.DEFINE_enum('detection_mode', 'offline',
+                  ['online', 'offline'], 'Switch between online (realtime) and offline (from file) mode')
+
+flags.DEFINE_string('csv_output_file_path',
+                    os.path.join(r'results\\floor_detection_results', os.path.basename("Floor_detection_ACC.csv")),
+                    'PATH to file, where all data from ride are stored')
+
+flags.DEFINE_string('acc_device', 'COM3', 'for windows COM ports, for linux /dev/USB0')
+
+
+# ===== CAMERA FEED FLAGS ======= #
 # common
-flags.DEFINE_enum('image_input_mode', 'folder', ['camera', 'video', 'folder'], 'Source of image data.')
+# flags.DEFINE_enum('image_input_mode', 'folder', ['camera', 'video', 'folder'], 'Source of image data.')
 
 # image_feed_camera
 flags.DEFINE_integer('camera_device_used', 0, 'An index of the used camera device', lower_bound=0)
-# image_feed_camera
-flags.DEFINE_string('image_input_folder_path', r"C:\Users\cernil\OneDrive - Y Soft Corporation "
-                                               r"a.s\DeepLearningBlackbox\test\test_images_elevator_control_panel",
+
+# image_feed_cvideo
+flags.DEFINE_string('image_input_folder_path',
+                    os.path.join(r'data\\Camera_input_data\\video', os.path.basename("A3_01.mp4")),
                     'PATH to the folder with images, images passed recursively.')
-# image_feed_video
-flags.DEFINE_string('image_input_video_path', None, 'PATH to the folder with video, used while image_input_mode=video.')
 
-
-# INPUT FEED FLAGS END
-#####
-# ELEVATOR CONTROLS DETECTION FLAGS START
-# elevator element detection
-flags.DEFINE_string('detector_elements_model_path', r"C:\Users\cernil\OneDrive - Y Soft Corporation "
-                                                    r"a.s\DeepLearningBlackbox\test\output\saved_model",
-                    'PATH to a SavedModel file capable of detection of elevator elements.')
-flags.DEFINE_enum('detection_elements_model_type', 'tf2',
-                  ['tf2', 'reserved'], 'Type of detection model used - RESERVED.')
-flags.DEFINE_string('label_map_path_detection',
-                    r"C:\Users\cernil\OneDrive - Y Soft Corporation "
-                    r"a.s\DeepLearningBlackbox\test\output\pascal_label_map.pbtxt",
-                    'PATH to the label_map.txt | label_map.pbtxt file for detection.')
-# floor button classification
-flags.DEFINE_string('classification_floor_button_model_path', r"C:\Users\cernil\OneDrive - Y Soft Corporation "
-                                                              r"a.s\DeepLearningBlackbox\button_classifier",
-                    'PATH to a SavedModel file capable of classification of elevator floor buttons.')
-flags.DEFINE_enum('classification_floor_button_model_type', 'keras',
-                  ['keras', 'reserved'], 'Type of classification model used - RESERVED.')
-# ELEVATOR CONTROLS DETECTION FLAGS END
-#####
+# ===== FLAGS STOP ===== #
 
 
 FLAGS = flags.FLAGS
