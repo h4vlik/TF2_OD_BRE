@@ -17,9 +17,6 @@ import json
 # script for offline floor detection based on real-time-floor detection
 class detectFloorAcc(object):
     def __init__(self):
-        self.input = InputFeed.InputFeed()
-        self.end_count = self.input.end_count
-
         # Initialization of communication
         self.sample_freq = 100  # frequency of input data
         self.delta_time = 1/self.sample_freq  # sample time of input data
@@ -53,8 +50,8 @@ class detectFloorAcc(object):
         self.velocity_array = []
         self.position_array = []
         self.time_array = []
-        self.floor_array = []
-        self.floor_vector = []
+        self.floor_array = []  # absolute
+        self.floor_vector = []  # relative
 
         # other inicializations
         self.main_loop_iterator = 0  # variable for counting iterations in the main loop
@@ -77,7 +74,7 @@ class detectFloorAcc(object):
         self.floor_number_eval = 0
 
         # starting position
-        self.starting_floor = 0
+        self.starting_floor = 1
 
         # elevator stop, True = elevators ride is over, False = elevator rides
         self.elevators_ride_stop = False
@@ -154,18 +151,15 @@ class detectFloorAcc(object):
                             self.vel = 0
                             self.vel_prev = 0
                             self.integrate = False
-                            self.elevators_ride_stop = True
                 else:
                     # pro kladnou deltu
                     if self.delta_vel >= (self.deltaVelMax*self.deltaVelMaxMultiplier_positive):
                         # zacni integrovat
                         self.integrate = True
-                        self.elevators_ride_stop = False
 
                     # pro zapornou deltu
                     elif abs(self.delta_vel) >= (self.deltaVelMax*self.deltaVelMaxMultiplier_negative) and self.delta_vel < 0:
                         self.integrate = True
-                        self.elevators_ride_stop = False
 
                     else:
                         # neintegruju, zachovam predeslou hodnotu
@@ -181,7 +175,7 @@ class detectFloorAcc(object):
             print("velocity difference - max value: ", self.deltaVelMax)
             self.length_floor = np.amax(np.absolute(self.position_array))
             print("delka jednoho patra: ", self.length_floor)
-
+            self.floor_array = np.round((self.position_array/self.length_floor), 0)
             f, axs = plt.subplots(4, 1, sharey=True)
 
             axs[0].plot(self.time_array, self.acc_array)
@@ -197,6 +191,7 @@ class detectFloorAcc(object):
             axs[3].set_ylabel('delta vel [m]')
             plt.show()
 
+            """
             # clear all data
             self.time_array = []
             self.velocity_array = []
@@ -214,7 +209,7 @@ class detectFloorAcc(object):
             self.floor_number = 0
             self.time = 0
             self.time_prev = 0
-
+            """
             self.state = "estimate floor"  # switch to next state
             print(" <<<<<< Kalibrace pro jizdu nahoru hotova >>>>>> \n")
             print("----- FLOOR ESTIMATION RUNNING ------\n")
@@ -357,9 +352,8 @@ class detectFloorAcc(object):
         axs1[3].plot(self.time_array, self.floor_array)
         axs1[3].set_xlabel("time [s]")
 
-    def spin(self):
+    def spin(self, acc_data):
         # MAIN LOOP
-        acc_data = self.input.get_acc_data(self.main_loop_iterator)
         self.acc = acc_data[1]
         self.time = acc_data[0]
 
@@ -375,6 +369,7 @@ class detectFloorAcc(object):
         # calibrate elevator
         if self.state == "ride calibration":
             self.calibrateRide()
+            self.pos_prev = self.length_floor*self.starting_floor
 
         # calibration is completed --> start estimate the floor number
         elif self.state == "estimate floor":
@@ -394,16 +389,18 @@ class detectFloorAcc(object):
                         self.acc = 0
                         self.integrate = False
                         self.floor_number_eval = np.copy(self.floor_number)
+                        self.elevators_ride_stop = True
             else:
                 # pro kladnou deltu
                 if self.delta_vel >= (self.deltaVelMax*self.deltaVelMaxMultiplier_positive):
                     # zacni integrovat
                     self.integrate = True
+                    self.elevators_ride_stop = False
 
                 # pro zapornou deltu
                 elif abs(self.delta_vel) >= (self.deltaVelMax*self.deltaVelMaxMultiplier_negative) and self.delta_vel < 0:
                     self.integrate = True
-
+                    self.elevators_ride_stop = False
                 else:
                     # neintegruju, zachovam predeslou hodnotu
                     self.vel = self.vel_prev
@@ -416,6 +413,8 @@ class detectFloorAcc(object):
         self.acc_prev = np.copy(self.acc)
         self.time_prev = np.copy(self.time)
         self.main_loop_iterator += 1  # iterate main loop iterator
+
+        return np.copy(self.floor_number)
 
 
 def createResultsFile(main_dir_path):

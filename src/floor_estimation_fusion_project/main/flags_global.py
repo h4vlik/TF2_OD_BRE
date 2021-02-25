@@ -4,6 +4,7 @@ Global variables for all scripts and parts of project.
 
 from absl import flags
 import os
+from pathlib import Path
 
 # Flag names are globally defined!  So in general, we need to be
 # careful to pick names that are unlikely to be used by other libraries.
@@ -48,10 +49,19 @@ flags.DEFINE_string('acc_device', 'COM3', 'for windows COM ports, for linux /dev
 # image_feed_camera
 flags.DEFINE_integer('camera_device_used', 0, 'An index of the used camera device', lower_bound=0)
 
-# image_feed_cvideo
-flags.DEFINE_string('image_input_folder_path',
-                    os.path.join(r'data\\Camera_input_data\\video', os.path.basename("A3_01.mp4")),
+# image_feed_video
+flags.DEFINE_string('image_input_video_path',
+                    os.path.join(r'data\Camera_input_data\video', os.path.basename("A3_01.mp4")),
                     'PATH to the folder with images, images passed recursively.')
+
+# ===== CNN FLAGS ====== #
+# image_feed_cvideo
+flags.DEFINE_string('best_weights_path',
+                    (r'results\\training_checkpoints\\colab_weigts_fine_tuning\\'),
+                    'PATH to the folder with images, images passed recursively.')
+
+# image_feed_camera
+flags.DEFINE_integer('num_classes', 10, 'Number of classification classes', lower_bound=0)
 
 # ===== FLAGS STOP ===== #
 
