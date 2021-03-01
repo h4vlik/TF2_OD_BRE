@@ -59,7 +59,7 @@ class VideoFeedAsync(ImageFeed):
         height = 720    # Get dimensions
         new_width = 500
         new_height = 500
-        
+
         left = (width - new_width)/2
         top = (height - new_height)/2
         right = (width + new_width)/2

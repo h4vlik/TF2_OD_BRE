@@ -12,6 +12,8 @@ class FloorEstimation(object):
         self.detectFloorAcc = detectFloorAcc()
         self.cameraEstimationFloor = cameraEstimationFloor()
         self.RUN_CODE = True
+
+        # information if elevator ride stop or not, True = stop, from acc_estimate_floor
         self.ride_stop = self.detectFloorAcc.elevators_ride_stop
 
         # inicialize estimated floor values
@@ -43,7 +45,7 @@ class FloorEstimation(object):
                 self.floor_acc = self.detectFloorAcc.spin(acc_data)
 
                 # load frame every Xth iteration
-                if self.main_loop_iterator % self.frame_divider == 0:
+                if (self.main_loop_iterator + 1) % self.frame_divider == 0:
                     self.inputFeed.CameraDataSource.get_next_frame()
 
                 # detect only when elevator stops
@@ -51,12 +53,12 @@ class FloorEstimation(object):
                     frame = self.inputFeed.get_camera_data()
                     self.floor_camera = self.cameraEstimationFloor.spin(frame)
                     self.detectFloorAcc.elevators_ride_stop = False
-                    print([self.floor_camera[0], self.floor_acc[0]])
+                    print([self.floor_camera, self.floor_acc])
                 self.main_loop_iterator += 1  # iterate main loop iterator
-
-            self.detectFloorAcc.plotData()
-            plt.show()
 
         except KeyboardInterrupt:
             print("Program will be stopped ...")
             pass
+
+        self.detectFloorAcc.plotData()
+        plt.show()

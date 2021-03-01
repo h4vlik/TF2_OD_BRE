@@ -19,8 +19,7 @@ class AccRealTimeFeed(AccFeed):
         self.offset = 0
 
         # Setup
-        # :TODO doplnit do global flags
-        self.com = 'COM4'
+        self.com = FLAGS.acc_device
         self.speed = 115200
 
         # Initialiazation of communication
