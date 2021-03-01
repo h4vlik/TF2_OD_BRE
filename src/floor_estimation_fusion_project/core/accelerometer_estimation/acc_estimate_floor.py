@@ -2,6 +2,7 @@
 scripts with detectFloorAcc class, that provides all functions connected with floor detection via accelerometer
 """
 from input_feed import InputFeed
+from main.flags_global import FLAGS
 
 import time
 import datetime
@@ -23,7 +24,7 @@ class detectFloorAcc(object):
 
         # Parameters - constants during running the program
         self.deltaVelMax = 0.01  # this is number after ride one floor - calibration - NEED TO BE DONE
-        self.cal_loop_count = self.sample_freq*13  # 10 seconds to ride one floor up or down, for elevator calibration
+        self.cal_loop_count = self.sample_freq*13  # 13 seconds to ride one floor up or down, for elevator calibration
         self.deltaVelMaxMultiplier_low = 0.01
         self.halfMaxVel = 0.2
         self.deltaVelMaxMultiplier_positive = 0.3
@@ -73,8 +74,11 @@ class detectFloorAcc(object):
         self.floor_number_prev = 0
         self.floor_number_eval = 0
 
+        # output - value that is needed for next steps of main algorithm
+        self.floor_diff = 0
+
         # starting position
-        self.starting_floor = 1
+        self.starting_floor = FLAGS.starting_floor
 
         # elevator stop, True = elevators ride is over, False = elevator rides
         self.elevators_ride_stop = False
@@ -117,9 +121,14 @@ class detectFloorAcc(object):
         i = 0
 
         if self.main_loop_iterator == 0:
+            # ====== WAIT FOR BUTTON PRESSED ====== #
+            # this part is modified by pressing key on keyboard by user
+            user_input = "n"
+            while(user_input is not "y"):
+                user_input = input("Is button pressed? If YES, to start calibration press [y]: ")
+
+            # ===== CALIBRATION STARTS ===== #
             print("Move elevator up. Calibration is running ... ")
-            self.time_array = np.append(self.time_array, self.time)
-            self.acc_array = np.append(self.acc_array, self.acc)
 
         elif self.main_loop_iterator > self.cal_loop_count and abs(self.acc) < self.acc_low_treshold:
             # filter
@@ -171,10 +180,12 @@ class detectFloorAcc(object):
             self.position_array = self.delta_time * integrate.cumtrapz(velocity_array, initial=0)
 
             # count tresholds
-            print("half of max velocity: ", self.halfMaxVel)
-            print("velocity difference - max value: ", self.deltaVelMax)
+
+            print("\n <<<<<< Kalibrace pro jizdu nahoru hotova >>>>>> \n")
+
             self.length_floor = np.amax(np.absolute(self.position_array))
             print("delka jednoho patra: ", self.length_floor)
+
             self.floor_array = np.round((self.position_array/self.length_floor), 0)
             f, axs = plt.subplots(4, 1, sharey=True)
 
@@ -211,7 +222,7 @@ class detectFloorAcc(object):
             self.time_prev = 0
             """
             self.state = "estimate floor"  # switch to next state
-            print(" <<<<<< Kalibrace pro jizdu nahoru hotova >>>>>> \n")
+
             print("----- FLOOR ESTIMATION RUNNING ------\n")
 
         else:
@@ -281,7 +292,6 @@ class detectFloorAcc(object):
 
         # actualize data
         self.pos_prev = np.copy(self.pos)
-        self.floor_number_prev = np.copy(self.floor_number_eval)
 
     def countProbability(self):
         prob_array = []
@@ -298,12 +308,21 @@ class detectFloorAcc(object):
 
         output: floor_vector
         """
-        floor_diff = self.floor_number_eval - self.floor_number_prev
 
-        if floor_diff == 0:
-            pass
-        else:
+        # elevator stopped
+        if self.elevators_ride_stop is True:
+            floor_diff = self.floor_number - self.floor_number_prev
+
+            """
+            # for debugging
+            print("test floor_diff: ", floor_diff)
+            print("test floor_number: ", self.floor_number)
+            print("test floor_number_prev: ", self.floor_number_prev)
+            """
+
             self.floor_vector = np.append(self.floor_vector, floor_diff)
+            self.floor_diff = int(floor_diff)
+            self.floor_number_prev = np.copy(self.floor_number)
 
     def evaluateDetection(self):
         """
@@ -353,7 +372,16 @@ class detectFloorAcc(object):
         axs1[3].set_xlabel("time [s]")
 
     def spin(self, acc_data):
-        # MAIN LOOP
+        """
+        spin
+        - main function of detectFloorAcc class
+        - contains algorithm for floor estimation (detection) via accelerometer data
+
+        input: acc_data - [time [s], acceleration [m/ss]]
+
+        output: floor_diff - difference between actual and previous floor
+        """
+
         self.acc = acc_data[1]
         self.time = acc_data[0]
 
@@ -382,28 +410,29 @@ class detectFloorAcc(object):
                     if abs(self.vel) > self.halfMaxVel:
                         self.vel = self.vel_prev
                         self.integrate = False
+                        self.elevators_ride_stop = False
                     else:
                         # part where integration stops --> SAVE FLOOR NUMBER AND LOAD IMAGE TO CLASSIFY IT
                         self.vel = 0
                         self.vel_prev = 0
                         self.acc = 0
                         self.integrate = False
-                        self.floor_number_eval = np.copy(self.floor_number)
                         self.elevators_ride_stop = True
             else:
                 # pro kladnou deltu
                 if self.delta_vel >= (self.deltaVelMax*self.deltaVelMaxMultiplier_positive):
                     # zacni integrovat
                     self.integrate = True
-                    self.elevators_ride_stop = False
 
                 # pro zapornou deltu
                 elif abs(self.delta_vel) >= (self.deltaVelMax*self.deltaVelMaxMultiplier_negative) and self.delta_vel < 0:
                     self.integrate = True
-                    self.elevators_ride_stop = False
+
                 else:
                     # neintegruju, zachovam predeslou hodnotu
                     self.vel = self.vel_prev
+
+                self.elevators_ride_stop = False
 
             self.getPosition()
             self.saveData()
@@ -414,7 +443,7 @@ class detectFloorAcc(object):
         self.time_prev = np.copy(self.time)
         self.main_loop_iterator += 1  # iterate main loop iterator
 
-        return np.copy(self.floor_number)
+        return self.floor_diff
 
 
 def createResultsFile(main_dir_path):
