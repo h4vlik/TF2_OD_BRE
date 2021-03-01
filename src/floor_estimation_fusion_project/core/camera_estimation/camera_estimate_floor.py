@@ -2,6 +2,7 @@
 Main
 """
 from core.camera_estimation.nn_model import build_model
+from core.camera_estimation.data_preprocessing import preprocess
 from main.flags_global import FLAGS
 from input_feed import InputFeed
 
@@ -49,8 +50,13 @@ class cameraEstimationFloor(object):
 
     def camera_prediction(self, frame):
         # get image from video or camera in RGB
+        # the color is converted from BGR to RGB
+        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         # convert to PIL
         pil_frame = Image.fromarray(frame)
+
+        # pil_frame.show()
+
         # convert to array
         frame_array = keras.preprocessing.image.img_to_array(pil_frame)
 
@@ -72,6 +78,8 @@ class cameraEstimationFloor(object):
 
         output: floor_estimation_camera
         """
-        self.camera_prediction(frame)
+        out_frame = preprocess(frame, self.IMG_SIZE[0])
 
-        return np.copy(self.floor_estimation_camera)
+        self.camera_prediction(out_frame)
+
+        return int(self.floor_estimation_camera)

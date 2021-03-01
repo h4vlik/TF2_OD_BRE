@@ -2,6 +2,7 @@ from main.flags_global import FLAGS
 from input_feed import InputFeed
 from core.accelerometer_estimation.acc_estimate_floor import detectFloorAcc
 from core.camera_estimation.camera_estimate_floor import cameraEstimationFloor
+from core.bayes_filter.bayesFilter import BayesFilter
 
 import matplotlib.pyplot as plt
 
@@ -11,13 +12,14 @@ class FloorEstimation(object):
         self.inputFeed = InputFeed.InputFeed()
         self.detectFloorAcc = detectFloorAcc()
         self.cameraEstimationFloor = cameraEstimationFloor()
+        self.bayesFilter = BayesFilter()
         self.RUN_CODE = True
 
         # information if elevator ride stop or not, True = stop, from acc_estimate_floor
         self.ride_stop = self.detectFloorAcc.elevators_ride_stop
 
         # inicialize estimated floor values
-        self.floor_acc = 0
+        self.diff_floor_acc = 0
         self.floor_camera = 0
 
         # loop iterator
@@ -42,7 +44,7 @@ class FloorEstimation(object):
                         self.RUN_CODE = False
 
                 acc_data = self.inputFeed.get_acc_data(self.main_loop_iterator)
-                self.floor_acc = self.detectFloorAcc.spin(acc_data)
+                self.diff_floor_acc = self.detectFloorAcc.spin(acc_data)
 
                 # load frame every Xth iteration
                 if (self.main_loop_iterator + 1) % self.frame_divider == 0:
@@ -52,8 +54,11 @@ class FloorEstimation(object):
                 if self.detectFloorAcc.elevators_ride_stop:
                     frame = self.inputFeed.get_camera_data()
                     self.floor_camera = self.cameraEstimationFloor.spin(frame)
-                    self.detectFloorAcc.elevators_ride_stop = False
-                    print([self.floor_camera, self.floor_acc])
+                    print([self.floor_camera, self.diff_floor_acc])
+
+                    # :TODO BAYES FILTER PART
+                    self.bayesFilter.spin(self.diff_floor_acc, self.floor_camera)
+
                 self.main_loop_iterator += 1  # iterate main loop iterator
 
         except KeyboardInterrupt:
@@ -62,3 +67,4 @@ class FloorEstimation(object):
 
         self.detectFloorAcc.plotData()
         plt.show()
+        self.bayesFilter.plotProbability()

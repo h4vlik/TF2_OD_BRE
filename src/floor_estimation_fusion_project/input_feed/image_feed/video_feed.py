@@ -52,19 +52,3 @@ class VideoFeedAsync(ImageFeed):
             if not repeat or k == 27:
                 break
         cv2.destroyWindow("VideoFrame")
-
-    def center_crop(self):
-        # :TODO need to be done preprocessing of input picture
-        width = 1280
-        height = 720    # Get dimensions
-        new_width = 500
-        new_height = 500
-
-        left = (width - new_width)/2
-        top = (height - new_height)/2
-        right = (width + new_width)/2
-        bottom = (height + new_height)/2
-
-        # Crop the center of the image
-        im = self.frame.crop((left, top, right, bottom))
-        frame[y:y+h, x:x+w]

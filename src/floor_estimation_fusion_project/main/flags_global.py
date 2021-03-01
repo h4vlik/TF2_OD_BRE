@@ -32,7 +32,7 @@ flags.DEFINE_string('csv_input_file_path',
                     os.path.join(r'data\\Acc_input_data\\A3_01', os.path.basename("A3_01.csv")),
                     'PATH to a csv input file, where meassurement data are stored.')
 
-flags.DEFINE_enum('detection_mode', 'online',
+flags.DEFINE_enum('detection_mode', 'offline',
                   ['online', 'offline'], 'Switch between online (realtime) and offline (from file) mode')
 
 flags.DEFINE_string('csv_output_file_path',
@@ -41,6 +41,7 @@ flags.DEFINE_string('csv_output_file_path',
 
 flags.DEFINE_string('acc_device', 'COM7', 'for windows COM ports, for linux /dev/USB0')
 
+flags.DEFINE_integer('starting_floor', 1, 'Number of floor, where robot start ride in the beginning', lower_bound=0)
 
 # ===== CAMERA FEED FLAGS ======= #
 # common
