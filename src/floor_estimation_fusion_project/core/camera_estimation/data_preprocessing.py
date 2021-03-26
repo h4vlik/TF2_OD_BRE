@@ -71,19 +71,13 @@ def myPerspectiveTransformation(image):
     out_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # erode
-    out_image = cv2.erode(out_image, None, iterations=2)
-
-    # adaptive treshold - avesome thing
-    out_image = cv2.adaptiveThreshold(
-        out_image, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY, 115, 11)
+    out_image = cv2.erode(out_image, None, iterations=3)
 
     # canny detection
     out_image = cv2.Canny(out_image, 50, 200)
 
     # dilatate - more amount of information
-    out_image = cv2.dilate(out_image, None, iterations=1)
+    out_image = cv2.dilate(out_image, None, iterations=4)
 
     # find contours in the edge map, then sort them by their
     # size in descending order
@@ -113,7 +107,7 @@ def myPerspectiveTransformation(image):
         perspect_image = image
         print("Couldn't find display edges")
 
-    elif cv2.contourArea(displayCnt) < 0.1*(out_image.shape[0]*out_image.shape[1]):
+    elif cv2.contourArea(displayCnt) < 0.2*(out_image.shape[0]*out_image.shape[1]):
         perspect_image = image
         print("Edge area is too small")
     else:
@@ -142,8 +136,8 @@ def centerCrop(image):
     width = 1280
     height = 720    # Get dimensions
 
-    new_width = 600
-    new_height = 600
+    new_width = 400
+    new_height = 400
 
     left = int((width - new_width)//2)
     top = int((height - new_height)//2)
@@ -168,13 +162,13 @@ def preprocess(image, image_size):
     :return out_image: output image after preprocessing
     """
     # center crop
-    image = centerCrop(image)
+    # image = centerCrop(image)
 
     # blurr
-    blurred = cv2.GaussianBlur(image, (5, 5), 1)
+    # image = cv2.GaussianBlur(image, (5, 5), 1)
 
     # perspective transformation
-    out_img = myPerspectiveTransformation(blurred)
+    out_img = myPerspectiveTransformation(image)
 
     # resize it
     out_img = resizeSquareRespectAcpectRatio(

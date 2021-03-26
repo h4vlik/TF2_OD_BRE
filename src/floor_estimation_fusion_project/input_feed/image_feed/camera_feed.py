@@ -8,7 +8,7 @@ from input_feed.image_feed.ImageFeed import ImageFeed
 from main.flags_global import FLAGS
 
 
-class CameraFeedAsync(ImageFeed):
+class CameraFeed(ImageFeed):
     def __init__(self):
         self.cap = None
         self.check = False
@@ -18,6 +18,12 @@ class CameraFeedAsync(ImageFeed):
     def open_camera_device(self):
         if self.cap is None:
             self.cap = cv2.VideoCapture(self.src)  # /dev/video0 on linux
+
+            # set resolution of the camera
+            width = 1280
+            height = 720
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
     def close_camera_device(self):
         self.cap.destroy()
@@ -43,7 +49,7 @@ class CameraFeedAsync(ImageFeed):
         if repeat is True:
             wait_delay = 1
         else:
-            wait_delay = 0.1
+            wait_delay = 500
         while True:
             cv2.imshow("CameraFrame", self.frame)
             k = cv2.waitKey(wait_delay)

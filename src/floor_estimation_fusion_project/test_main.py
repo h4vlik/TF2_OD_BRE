@@ -3,8 +3,10 @@ from input_feed import InputFeed
 from core.accelerometer_estimation.acc_estimate_floor import detectFloorAcc
 from core.camera_estimation.camera_estimate_floor import cameraEstimationFloor
 from core.bayes_filter.bayesFilter import BayesFilter
+from core.utils.utilsClass import utilsClass
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 class FloorEstimation(object):
@@ -13,18 +15,23 @@ class FloorEstimation(object):
         self.detectFloorAcc = detectFloorAcc()
         self.cameraEstimationFloor = cameraEstimationFloor()
         self.bayesFilter = BayesFilter()
+        self.utilsClass = utilsClass()
         self.RUN_CODE = True
 
         # information if elevator ride stop or not, True = stop, from acc_estimate_floor
         self.ride_stop = self.detectFloorAcc.elevators_ride_stop
 
         # inicialize estimated floor values
+        self.time = 0
         self.diff_floor_acc = 0
         self.floor_camera = 0
+        self.camera_frames = 2
+        self.fusion_result = 0
 
         # loop iterator
         self.main_loop_iterator = 0
 
+        # other init values
         self.camera_fps = 15
         self.acc_frequency = 100
         self.frame_divider = round(self.acc_frequency/self.camera_fps)
@@ -44,21 +51,37 @@ class FloorEstimation(object):
                         self.RUN_CODE = False
 
                 acc_data = self.inputFeed.get_acc_data(self.main_loop_iterator)
+                self.time = acc_data[0]
                 self.diff_floor_acc = self.detectFloorAcc.spin(acc_data)
 
-                # load frame every Xth iteration
-                if (self.main_loop_iterator + 1) % self.frame_divider == 0:
-                    self.inputFeed.CameraDataSource.get_next_frame()
+                # set floor_camera_array to empty array
+                floor_camera_array = []
 
                 # detect only when elevator stops
                 if self.detectFloorAcc.elevators_ride_stop:
-                    frame = self.inputFeed.get_camera_data()
-                    self.floor_camera = self.cameraEstimationFloor.spin(frame)
+                    # LOOP OVER 3 NEXT FRAMES AND RETURN THE MOST FREQUENTED VALUE
+                    for i in range(self.camera_frames):
+                        frame = self.inputFeed.get_camera_data()
+                        floor_camera = self.cameraEstimationFloor.spin(frame)
+                        floor_camera_array = np.append(floor_camera_array, floor_camera)
+                    print("Detections from camera: ", floor_camera_array)
+                    self.floor_camera = self.utilsClass.getMostCommon(floor_camera_array)
+
                     print([self.floor_camera, self.diff_floor_acc])
 
-                    # :TODO BAYES FILTER PART
-                    self.bayesFilter.spin(self.diff_floor_acc, self.floor_camera)
+                    # BAYES FILTER PART
+                    bel_result = self.bayesFilter.spin(self.diff_floor_acc, self.floor_camera)
+                    self.fusion_result = self.bayesFilter.getFloorResult()
 
+                    # SAVE ACTUAL RESULT TO CSV FILE
+                    self.utilsClass.saveData(self.time, self.floor_camera, self.diff_floor_acc, bel_result, self.fusion_result)
+
+                else:
+                    # load frame every Xth iteration, when NO ELEV STOP IS DETECTED
+                    if (self.main_loop_iterator + 1) % self.frame_divider == 0 and FLAGS.detection_mode == 'offline':
+                        self.inputFeed.CameraDataSource.get_next_frame()
+
+                self.utilsClass.saveArrayData(self.time, self.floor_camera, self.diff_floor_acc, self.fusion_result)
                 self.main_loop_iterator += 1  # iterate main loop iterator
 
         except KeyboardInterrupt:
@@ -66,5 +89,5 @@ class FloorEstimation(object):
             pass
 
         self.detectFloorAcc.plotData()
-        plt.show()
+        self.utilsClass.visualizeRideFusion()
         self.bayesFilter.plotProbability()

@@ -24,11 +24,11 @@ class detectFloorAcc(object):
 
         # Parameters - constants during running the program
         self.deltaVelMax = 0.01  # this is number after ride one floor - calibration - NEED TO BE DONE
-        self.cal_loop_count = self.sample_freq*13  # 13 seconds to ride one floor up or down, for elevator calibration
+        self.cal_loop_count = self.sample_freq*15  # 13 seconds to ride one floor up or down, for elevator calibration
         self.deltaVelMaxMultiplier_low = 0.01
         self.halfMaxVel = 0.2
         self.deltaVelMaxMultiplier_positive = 0.3
-        self.deltaVelMaxMultiplier_negative = 0.2
+        self.deltaVelMaxMultiplier_negative = 0.3
         self.length_floor = 2.35  # floor lenght in meters
         self.acc_low_treshold = 0.1
 
@@ -83,6 +83,9 @@ class detectFloorAcc(object):
         # elevator stop, True = elevators ride is over, False = elevator rides
         self.elevators_ride_stop = False
 
+        # create file .csv for saving data
+        self.__createFileHeader()
+
     def __init_filters(self):
         """
         create filters
@@ -106,6 +109,13 @@ class detectFloorAcc(object):
             analog=False,
             output='ba')
 
+    def __createFileHeader(self):
+        # vytvorime soubor pro ukladani dat a zapisu tam header
+        self.fileName = "realtime_data_acc_estimate_floor.csv"  # name of the CSV file generated
+        header = str("time"+"\t"+"acc_z"+"\t"+"vel_z"+"\t"+"pos_z"+"\t"+"floor_number"+"\n")
+        file = open(self.fileName, "a")
+        file.write(header)  # write data with a newline
+
     def calibrateRide(self):
         """
         calibrate tresholds for floor estimation part when elevator rides up
@@ -124,7 +134,7 @@ class detectFloorAcc(object):
             # ====== WAIT FOR BUTTON PRESSED ====== #
             # this part is modified by pressing key on keyboard by user
             user_input = "n"
-            while(user_input is not "y"):
+            while(user_input != "y"):
                 user_input = input("Is button pressed? If YES, to start calibration press [y]: ")
 
             # ===== CALIBRATION STARTS ===== #
@@ -187,8 +197,8 @@ class detectFloorAcc(object):
             print("delka jednoho patra: ", self.length_floor)
 
             self.floor_array = np.round((self.position_array/self.length_floor), 0)
-            f, axs = plt.subplots(4, 1, sharey=True)
 
+            f, axs = plt.subplots(4, 1, sharey=True)
             axs[0].plot(self.time_array, self.acc_array)
             axs[0].set_ylabel('acc [m/ss]')
 
@@ -223,7 +233,7 @@ class detectFloorAcc(object):
             """
             self.state = "estimate floor"  # switch to next state
 
-            print("----- FLOOR ESTIMATION RUNNING ------\n")
+            print("\n----- FLOOR ESTIMATION RUNNING ------\n")
 
         else:
             self.time_array = np.append(self.time_array, self.time)
@@ -253,8 +263,10 @@ class detectFloorAcc(object):
         # low pass filter - DLPF
         self.filt_buffer = signal.filtfilt(self.DLPF[0], self.DLPF[1], self.filt_buffer)
 
-    # count raw velocity by integration, count delta_vel, dont update
     def getVelocity(self):
+        """
+        count raw velocity by integration, count delta_vel, dont update
+        """
         # derivace
         # vypocitam deltu
         self.delta_time = self.time - self.time_prev
@@ -267,24 +279,25 @@ class detectFloorAcc(object):
         # vypocitam deltu vel
         self.delta_vel = self.vel - self.vel_prev
 
-    # vypocita pomoci integrace polohu
     def getPosition(self):
+        """
+        count position by integration of velocity
+        """
         # derivace
         # vypocitam polohu (integruji)
-        self.pos = np.round((self.vel_prev + self.delta_vel) * self.delta_time, 2)
+        self.pos = (self.vel_prev + self.delta_vel) * self.delta_time
         self.pos = self.pos + self.pos_prev
 
-        # print("Aktualni pozice: ",self.pos)
-
-        # vypocitam pozici - pokud se pozice v dalsim kroku nezmeni --> cekam v patre --> zaokrouhlim na cela patra
-        # kdyz se zacne menit, pricitam uz k poloze, ktera odpovida konkretnimu patru --> zmensim chybu
-        # UPRAVENO - NUTNE OVERIT
-        if self.pos == self.pos_prev and self.vel == 0:
+        # vypocitam pozici - pokud se pozice v dalsim kroku nezmeni --> cekam v patre
+        # --> zaokrouhlim na cela patra a vypocitam pozici, odpovidajici tomuto patru  --> zmensim chybu
+        if np.round(self.pos, 2) == np.round(self.pos_prev, 2) and self.vel == 0:
+            # count floor number and round it
             self.floor_number = np.round((self.pos/self.length_floor), 0)
-            # count probability
-            # self.countProbability()
+            # change position to fit to the actual floor
             self.pos = self.floor_number * self.length_floor
+
         else:
+            # just count floor number
             self.floor_number = np.round((self.pos/self.length_floor), 0)
 
         # count diff floor and append it to floor vector
@@ -357,19 +370,39 @@ class detectFloorAcc(object):
         self.time_array = np.append(self.time_array, self.time)
         self.floor_array = np.append(self.floor_array, self.floor_number)
 
+        # save data to .txt
+        str_data = str(str(self.time)+'\t'+str(self.acc)+'\t'+str(self.vel)+'\t'+str(self.pos)+'\t'+str(self.floor_number))
+        file = open(self.fileName, "a")
+        file.write(str_data + "\n")  # write data with a newline
+
     def plotData(self):
+        # Major ticks every 20, minor ticks every 5
+        major_ticks_acc = np.arange(-2, 2, 0.5)
+        major_ticks_pos = np.arange(-10, 30, 5)
+        major_ticks_floor = np.arange(-2, 12, 1)
+        minor_ticks = np.arange(0, 1000, 10)
+
         _, axs1 = plt.subplots(nrows=4, ncols=1, figsize=(10, 6))
         rows = ['{}'.format(row) for row in ['filt_acceleration \n[m/ss]', 'velocity \n[m/s]', 'position \n[m]', 'floor \n[-]']]
 
         for ax, row in zip(axs1, rows):
             ax.set_ylabel(row)
-            ax.grid()
+            ax.set_xticks(minor_ticks, minor=True)
 
         axs1[0].plot(self.time_array, self.acc_array)
+        axs1[0].set_yticks(major_ticks_acc)
+        axs1[0].grid()
         axs1[1].plot(self.time_array, self.velocity_array)
+        axs1[1].set_yticks(major_ticks_acc)
+        axs1[1].grid()
         axs1[2].plot(self.time_array, self.position_array)
+        axs1[2].set_yticks(major_ticks_pos)
+        axs1[2].grid()
         axs1[3].plot(self.time_array, self.floor_array)
+        axs1[3].set_yticks(major_ticks_floor)
+        axs1[3].grid()
         axs1[3].set_xlabel("time [s]")
+        plt.show()
 
     def spin(self, acc_data):
         """
@@ -444,85 +477,3 @@ class detectFloorAcc(object):
         self.main_loop_iterator += 1  # iterate main loop iterator
 
         return self.floor_diff
-
-
-def createResultsFile(main_dir_path):
-    """
-    create csv file for saving results
-    """
-    # vytvorime soubor pro ukladani vysledku
-    path_to_res_file = os.path.join(
-        main_dir_path,
-        r'res\\',
-        os.path.basename("evaluation_results.csv"))
-    header = str("real floor"+"\t"+"count floor"+"\t"+"result"+"\n")
-    file = open(path_to_res_file, "a")
-    file.write(header)  # write data with a newline
-
-
-def load_real_data(folder, filename, json_data):
-    """
-    load information about real floor from json file
-    count real floor vector (difference of real floor information)
-    """
-    real_floor_vector = np.diff(json_data[folder][filename]["floor"])
-    print(real_floor_vector)
-
-    return real_floor_vector
-
-
-# --- kod, ktery se provede --- #
-def main():
-    # define path
-    main_dir_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    # breach_dir_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-    # create file for saving results
-    createResultsFile(main_dir_path)
-
-    # path to csv directory
-    path_to_csv_dir = os.path.join(
-        main_dir_path,
-        r'Data_for_fusion\\MERENI_18_2_2021_strojarna\\')
-
-    # path to real floor data json file
-    path_to_json_file = os.path.join(
-        main_dir_path,
-        r'Data_for_fusion',
-        os.path.basename("mereni_18_2_2021_real_floor.json"))
-
-    # open json file
-    f = open(path_to_json_file)
-    real_floor_data = json.load(f)
-
-    # loop over all folders in csv_soubory
-    for _, folder in enumerate(os.listdir(path_to_csv_dir)):
-        print("new folder:", folder)
-        # loop over all files in folder
-        for _, filename in enumerate(os.listdir(path_to_csv_dir+folder)):
-            print("new file:", filename)
-
-            # path to .csv for evaluation
-            path_to_csv_file = os.path.join(
-                path_to_csv_dir,
-                folder+'\\',
-                os.path.basename(filename))
-            # path to csv where calibration data are stored
-            path_to_calibration_csv_file = os.path.join(
-                path_to_csv_dir,
-                folder+'\\',
-                os.path.basename("kalibrace.csv"))
-
-            # loaded real floor vector for evaluation
-            real_floor_vector = load_real_data(folder, filename, real_floor_data)
-
-            # main part of code
-            detect_floor = detectFloorAcc(path_to_csv_file, path_to_calibration_csv_file, real_floor_vector)
-            detect_floor.spin()
-            detect_floor.evaluateDetection()
-            detect_floor.plotData()
-            plt.show()
-
-
-if __name__ == '__main__':
-    main()

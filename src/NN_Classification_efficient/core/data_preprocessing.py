@@ -70,19 +70,13 @@ def myPerspectiveTransformation(image):
     out_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # erode
-    out_image = cv2.erode(out_image, None, iterations=2)
-
-    # adaptive treshold - avesome thing
-    out_image = cv2.adaptiveThreshold(
-        out_image, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY, 115, 11)
+    out_image = cv2.erode(out_image, None, iterations=3)
 
     # canny detection
     out_image = cv2.Canny(out_image, 50, 200)
 
     # dilatate - more amount of information
-    out_image = cv2.dilate(out_image, None, iterations=1)
+    out_image = cv2.dilate(out_image, None, iterations=4)
 
     # find contours in the edge map, then sort them by their
     # size in descending order
@@ -100,7 +94,7 @@ def myPerspectiveTransformation(image):
         # count perimeter for closed shapes (for us = display)
         peri = cv2.arcLength(c, True)
         # find rectangle for closed shapes
-        approx = cv2.approxPolyDP(c, 0.03 * peri, True)
+        approx = cv2.approxPolyDP(c, 0.08 * peri, True)
         # if the contour has four vertices, then we have found display
 
         if len(approx) == 4:
@@ -112,7 +106,7 @@ def myPerspectiveTransformation(image):
         perspect_image = image
         print("Couldn't find display edges")
 
-    elif cv2.contourArea(displayCnt) < 0.3*(out_image.shape[0]*out_image.shape[1]):
+    elif cv2.contourArea(displayCnt) < 0.1*(out_image.shape[0]*out_image.shape[1]):
         perspect_image = image
         print("Edge area is too small")
     else:
@@ -123,15 +117,10 @@ def myPerspectiveTransformation(image):
     return perspect_image
 
 
-def getDigitWithColour(image):
-    TODO
-    pass
-
-
 def preprocess(image, image_size):
     """
     Preprocess
-    pre-process the image by to adaptive_treshold, perspectiv_transform,
+    pre-process the image by perspectiv_transform,
     erode, diletate, resize
 
     :param image: image of display from cv2.read
@@ -139,11 +128,9 @@ def preprocess(image, image_size):
     :return out_image: output image after preprocessing
     """
 
-    # blurr
-    blurred = cv2.GaussianBlur(image, (5, 5), 1)
-
     # perspective transformation
-    out_img = myPerspectiveTransformation(blurred)
+    # out_img = myPerspectiveTransformation(image)
+    out_img = image
 
     # resize it
     out_img = resizeSquareRespectAcpectRatio(
@@ -152,6 +139,8 @@ def preprocess(image, image_size):
         cv2.INTER_AREA
         )
 
+    # blurr
+    # blurred = cv2.GaussianBlur(image, (5, 5), 1)
     # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (1, 5))
     # thresh_img = cv2.morphologyEx(thresh_img, cv2.MORPH_OPEN, kernel)
     return out_img
@@ -159,30 +148,44 @@ def preprocess(image, image_size):
 
 if __name__ == "__main__":
 
-    # set path
-    path_read = ('data/Dataset_try/')
-    path_write = ('data/Dataset_ready/')
+    # path to DIPLOMKA
+    diplomka_path = os.path.dirname(
+        os.path.dirname(
+            os.path.dirname(
+                os.path.dirname(
+                    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))))
+    print(diplomka_path)
 
+    """
+    path_read = os.path.join(
+        diplomka_path,
+        r'DATA\DISPLAY_IMAGES\images_classes_from_camera\pricni')
+
+    path_write = os.path.join(
+        diplomka_path,
+        r'DATA\DISPLAY_IMAGES\images_classes_from_camera\All_preprocessed')
+    """
+
+    path_read = "C:\\Users\\marti\\OneDrive\\Plocha\\DP_OBRAZKY_DISPLAY\\display_classes_-2-12"
+    path_write = "C:\\Users\\marti\\OneDrive\\Plocha\\DP_OBRAZKY_DISPLAY\\display_classes_-2-12_preprocessed"
     # variable
-    IMG_SIZE = 100
+    IMG_SIZE = 224
 
     # go trough all folders in the path
     for fo_number, folder in enumerate(os.listdir(path_read)):
-        print("new folder")
-        for fi_number, filename in enumerate(os.listdir(path_read+'\\'+folder)):
-            if fi_number > 1500:
+        print("new folder: ", folder)
+        for fi_number, filename in enumerate(os.listdir(path_read+'\\'+str(folder))):
+            if fi_number > 4000:
                 break
             else:
-                image = cv2.imread(path_read+str(folder)+'\\'+str(filename))
-
+                image = cv2.imread(path_read+"\\"+str(folder)+'\\'+str(filename))
                 # preprocess the image file
                 new_image = preprocess(image, IMG_SIZE)
                 # write file
                 cv2.imwrite(
-                    path_write+str(folder)+'\\'
-                    + str(folder)+'_image_'
-                    + str(fi_number)+'.jpg',
+                    path_write+"\\"+str(folder)+'\\'
+                    + "P_" + str(folder) + '_image_' + str(fi_number)+'.jpg',
                     new_image,
                     [int(cv2.IMWRITE_JPEG_QUALITY), 100])
 
-                print("ulozeno: ", fi_number)
+                # print("ulozeno: ", fi_number)

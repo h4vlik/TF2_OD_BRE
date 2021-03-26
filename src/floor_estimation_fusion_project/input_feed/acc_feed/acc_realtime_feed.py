@@ -23,7 +23,7 @@ class AccRealTimeFeed(AccFeed):
         self.speed = 115200
 
         # Initialiazation of communication
-        self.sample_freq = 100  # frequency of input data
+        self.sample_freq = 100  # frequency of sensor
         self.delta_time = 1/self.sample_freq  # sample time of input data
         self.serie = 0
         self.line = 0
@@ -101,7 +101,7 @@ class AccRealTimeFeed(AccFeed):
 
     def get_acceleration(self, main_loop_iterator):
         """
-        load data from from sensor
+        load data from from sensor, main_loop_iterator is not used, but need to be fill
         """
         self.getLine()
         self.makeAccLinVec()

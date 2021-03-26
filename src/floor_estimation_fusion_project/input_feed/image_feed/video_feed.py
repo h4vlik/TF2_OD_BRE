@@ -8,7 +8,7 @@ from input_feed.image_feed.ImageFeed import ImageFeed
 from main.flags_global import FLAGS
 
 
-class VideoFeedAsync(ImageFeed):
+class VideoFeed(ImageFeed):
     def __init__(self, frame_capture=False):
         self.cap = None
         self.main_dir = FLAGS.main_dir_path
@@ -45,7 +45,7 @@ class VideoFeedAsync(ImageFeed):
         if repeat is True:
             wait_delay = 1
         else:
-            wait_delay = 200
+            wait_delay = 1000
         while True:
             cv2.imshow("VideoFrame", self.frame)
             k = cv2.waitKey(wait_delay)

@@ -28,10 +28,15 @@ flags.DEFINE_string(
     'PATH to main folder path (TF_OD_BRE folder)')
 
 # ===== ACC FEED FLAGS ====== #
-flags.DEFINE_string('csv_input_file_path',
-                    os.path.join(r'data\\Acc_input_data\\A3_01', os.path.basename("A3_01.csv")),
-                    'PATH to a csv input file, where meassurement data are stored.')
 
+flags.DEFINE_string('csv_input_file_path',
+                    os.path.join(r'data\\Acc_input_data\\lesna_01', os.path.basename("lesna_01.csv")),
+                    'PATH to a csv input file, where meassurement data are stored.')
+"""
+flags.DEFINE_string('csv_input_file_path',
+                    os.path.join(r'data\\Acc_input_data\\Pricni', os.path.basename("test_pricni_5_3_acc_data.csv")),
+                    'PATH to a csv input file, where meassurement data are stored.')
+"""
 flags.DEFINE_enum('detection_mode', 'offline',
                   ['online', 'offline'], 'Switch between online (realtime) and offline (from file) mode')
 
@@ -39,20 +44,20 @@ flags.DEFINE_string('csv_output_file_path',
                     os.path.join(r'results\\floor_detection_results', os.path.basename("Floor_detection_ACC.csv")),
                     'PATH to file, where all data from ride are stored')
 
-flags.DEFINE_string('acc_device', 'COM7', 'for windows COM ports, for linux /dev/USB0')
+flags.DEFINE_string('acc_device', 'COM4', 'for windows COM ports, for linux /dev/USB0')
 
 flags.DEFINE_integer('starting_floor', 1, 'Number of floor, where robot start ride in the beginning', lower_bound=0)
 
 # ===== CAMERA FEED FLAGS ======= #
 # common
-# flags.DEFINE_enum('image_input_mode', 'folder', ['camera', 'video', 'folder'], 'Source of image data.')
+flags.DEFINE_enum('image_input_mode', 'video', ['camera', 'video', 'folder'], 'Source of image data.')
 
 # image_feed_camera
 flags.DEFINE_integer('camera_device_used', 0, 'An index of the used camera device', lower_bound=0)
 
 # image_feed_video
 flags.DEFINE_string('image_input_video_path',
-                    os.path.join(r'data\Camera_input_data\video', os.path.basename("A3_01.mp4")),
+                    os.path.join(r'data\Camera_input_data\video', os.path.basename("lesna_01_upravene.mp4")),
                     'PATH to the folder with images, images passed recursively.')
 
 # ===== CNN FLAGS ====== #
@@ -62,9 +67,14 @@ flags.DEFINE_string('best_weights_path',
                     'PATH to the folder with images, images passed recursively.')
 
 # image_feed_camera
-flags.DEFINE_integer('num_classes', 10, 'Number of classification classes', lower_bound=0)
+flags.DEFINE_integer('num_classes', 15, 'Number of classification classes', lower_bound=0)
 
 # ===== FLAGS STOP ===== #
 
+# BAYES FLAGS #
+flags.DEFINE_list(
+        'FLOOR_LABELS',
+        ['-2', '-1', '0.', '1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.', '10.', '11.', '12.'],
+        'Labels for floor result.')
 
 FLAGS = flags.FLAGS

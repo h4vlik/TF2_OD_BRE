@@ -25,9 +25,8 @@ import time
 
 class cameraEstimationFloor(object):
     def __init__(self):
-        # :TODO IputFeed nemuze to takto fungovat Inicializuji 2x to same, takze by se spustil znovu akcelerometr :/
         self.main_dir = FLAGS.main_dir_path
-        self.PATH_TO_WEIGHS = Path("results/training_checkpoints/colab_weigts_fine_tuning/")
+        self.PATH_TO_WEIGHS = Path("results/training_checkpoints/weights_15classes_19_3_2021/")
         print(self.PATH_TO_WEIGHS)
         self.NUM_CLASSES = FLAGS.num_classes
 
@@ -35,7 +34,7 @@ class cameraEstimationFloor(object):
         self.CLASS_NAMES = [
                 '0.', '1.', '2.', '3.',
                 '4.', '5.', '6.',
-                '7.', '8.', '9.']
+                '7.', '8.', '9.', '10.', '11.', '12.', '-1', '-2']
         self.IMG_SIZE = (224, 224)
         self.floor_estimation_camera = 0
 
@@ -70,6 +69,12 @@ class cameraEstimationFloor(object):
 
         self.floor_estimation_camera = float(result)
 
+    def show_img(self, frame):
+        wait_delay = 1000
+        cv2.imshow("CameraFrame", frame)
+        cv2.waitKey(wait_delay)
+        cv2.destroyWindow("CameraFrame")
+
     def spin(self, frame):
         """
         prediction on the picture from video or camera
@@ -78,8 +83,16 @@ class cameraEstimationFloor(object):
 
         output: floor_estimation_camera
         """
-        out_frame = preprocess(frame, self.IMG_SIZE[0])
 
-        self.camera_prediction(out_frame)
+        # check if input frame is valid or is None
+        if frame is None:
+            # :TODO make uniform probability, when frame is None
+            self.floor_estimation_camera = 1
+        else:
+            out_frame = preprocess(frame, self.IMG_SIZE[0])
+
+            self.camera_prediction(out_frame)
+
+            self.show_img(out_frame)
 
         return int(self.floor_estimation_camera)
