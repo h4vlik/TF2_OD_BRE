@@ -42,8 +42,10 @@ class cameraEstimationFloor(object):
         self.__load_weights()
 
     def __load_weights(self):
-        # The model weights (that are considered the best)
-        # are loaded into the model.
+        """
+        The model weights (that are considered the best)
+        are loaded into the model.
+        """
         latest = tf.train.latest_checkpoint(self.PATH_TO_WEIGHS)
         self.model.load_weights(latest)
 
@@ -65,7 +67,13 @@ class cameraEstimationFloor(object):
         # PREDICTION
         predictions = self.model.predict(tf_img_array)
         rounded_pred = np.around(predictions*100)
-        result = self.CLASS_NAMES[predictions.argmax(axis=1)[0]]
+
+        # fix bad results
+        if np.max(rounded_pred) <= 85:
+            # when floor_camera is 1000, bad classification is occured
+            result = 1000
+        else:
+            result = self.CLASS_NAMES[predictions.argmax(axis=1)[0]]
 
         self.floor_estimation_camera = float(result)
 

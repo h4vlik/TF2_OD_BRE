@@ -63,6 +63,14 @@ class FloorEstimation(object):
                     for i in range(self.camera_frames):
                         frame = self.inputFeed.get_camera_data()
                         floor_camera = self.cameraEstimationFloor.spin(frame)
+
+                        if floor_camera == 1000:
+                            # bad classificaiton occured --> set camera result as fusion_result(t-1) + acc_diff_floor
+                            floor_camera = int(np.copy(self.fusion_result) + np.copy(self.diff_floor_acc))
+                            print("bad classification detected")
+                        else:
+                            pass
+
                         floor_camera_array = np.append(floor_camera_array, floor_camera)
                     print("Detections from camera: ", floor_camera_array)
                     self.floor_camera = self.utilsClass.getMostCommon(floor_camera_array)

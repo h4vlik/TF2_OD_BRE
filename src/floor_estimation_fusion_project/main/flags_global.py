@@ -30,7 +30,7 @@ flags.DEFINE_string(
 # ===== ACC FEED FLAGS ====== #
 
 flags.DEFINE_string('csv_input_file_path',
-                    os.path.join(r'data\\Acc_input_data\\lesna_01', os.path.basename("lesna_01.csv")),
+                    os.path.join(r'data\\Acc_input_data\\stef_02', os.path.basename("stef_02.csv")),
                     'PATH to a csv input file, where meassurement data are stored.')
 """
 flags.DEFINE_string('csv_input_file_path',
@@ -57,7 +57,7 @@ flags.DEFINE_integer('camera_device_used', 0, 'An index of the used camera devic
 
 # image_feed_video
 flags.DEFINE_string('image_input_video_path',
-                    os.path.join(r'data\Camera_input_data\video', os.path.basename("lesna_01_upravene.mp4")),
+                    os.path.join(r'data\Camera_input_data\video', os.path.basename("stef_02_upravene.mp4")),
                     'PATH to the folder with images, images passed recursively.')
 
 # ===== CNN FLAGS ====== #

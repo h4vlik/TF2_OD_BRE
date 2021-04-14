@@ -24,7 +24,7 @@ class detectFloorAcc(object):
 
         # Parameters - constants during running the program
         self.deltaVelMax = 0.01  # this is number after ride one floor - calibration - NEED TO BE DONE
-        self.cal_loop_count = self.sample_freq*15  # 13 seconds to ride one floor up or down, for elevator calibration
+        self.cal_loop_count = self.sample_freq*16  # 13 seconds to ride one floor up or down, for elevator calibration
         self.deltaVelMaxMultiplier_low = 0.01
         self.halfMaxVel = 0.2
         self.deltaVelMaxMultiplier_positive = 0.3

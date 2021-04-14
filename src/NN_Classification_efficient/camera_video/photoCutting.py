@@ -1,6 +1,7 @@
 import cv2
 import os
-
+import glob
+from natsort import natsorted
 
 def centerCrop(image, w, h):
     # input image size
@@ -50,25 +51,25 @@ main_dir_path = os.path.dirname(os.path.dirname(
 # path to video read
 path_to_video = os.path.join(
     main_dir_path,
-    r'DATA\\Camera_data\\MERENI_12_3_LESNA_VIDEO',
-    os.path.basename("lesna_01.mp4"))
+    r'KODING\\TF2_OD_BRE\\data\\Camera_input_data\\video\\',
+    os.path.basename("stef_02.mp4"))
 
 
 # path to save images
 path_to_save_file = os.path.join(
     main_dir_path,
-    r'DATA\\DISPLAY_IMAGES\\FOR_FUSION\\IBC_15_3\\ibc_01\\')
+    r'DATA\\DISPLAY_IMAGES\\FOR_FUSION\\stef_02\\')
 
 path_to_video_save = os.path.join(
     main_dir_path,
     r'KODING\\TF2_OD_BRE\\data\\Camera_input_data\\video\\',
-    os.path.basename("lesna_01_upravene.mp4"))
+    os.path.basename("stef_02_upravene.mp4"))
 
 
 # ____ dimensions ______
 # croped region
-h = 500
-w = 500
+h = 400
+w = 400
 
 size = (w, h)
 # ______________________
@@ -76,10 +77,12 @@ size = (w, h)
 # video read capture
 cap = cv2.VideoCapture(path_to_video)
 
+
 # set video save format
 fourcc = cv2.VideoWriter_fourcc(*'MP4V')
 out = cv2.VideoWriter(path_to_video_save, fourcc, 15.0, size)
 
+"""
 i = 0
 while(True):
     ret, frame = cap.read()
@@ -88,12 +91,18 @@ while(True):
         break
 
     #crop = centerCrop(frame, w, h)
-    crop = optionalCrop(frame, w, h)
+    #crop = optionalCrop(frame, w, h)
 
-    out.write(crop)
-    #cv2.imwrite(os.path.join(path_to_save_file, 'display'+str(i)+'.jpg'), crop)
+    #out.write(crop)
+    cv2.imwrite(os.path.join(path_to_save_file, 'display'+str(i)+'.jpg'), frame)
     i += 1
+"""
 
-cap.release()
+for fi_number, filename in enumerate(natsorted(os.listdir(path_to_save_file))):
+    print(filename)
+    image = cv2.imread(path_to_save_file+'\\'+str(filename))
+    out.write(image)
+
+# cap.release()
 out.release()
 cv2.destroyAllWindows()
